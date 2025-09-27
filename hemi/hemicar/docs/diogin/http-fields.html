@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>HTTP 字段列表</title>
+		<style type="text/css">
+		html{font-family:Sans-Serif;}
+		table{margin:20px 10px;border-collapse:collapse;}
+		th,td{border:1px solid #000;text-align:center;padding:4px 8px;}
+		tr td:first-child{text-align:left;}
+		tr td:last-child{text-align:left;}
+		.code{font-family:Monospace;}
+		.general{background:#efe;}
+		.request{background:#eef;}
+		.response{background:#fee;}
+		th{color:#fff;background:#c00;}
+		</style>
+	</head>
+	<body>
+		<h1>HTTP 字段列表</h1>
+
+		<h2>前言</h2>
+		<p>参考 RFC：</p>
+		<ul>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc3986">RFC 3986：URI</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc9110">RFC 9110：HTTP 语义</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc9111">RFC 9111：HTTP 缓存</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc9112">RFC 9112：HTTP/1.1</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc9113">RFC 9113：HTTP/2</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc7541">RFC 7541：HPACK</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc9114">RFC 9114：HTTP/3</a></li>
+			<li><a href="https://datatracker.ietf.org/doc/html/rfc9204">RFC 9204：QPACK</a></li>
+		</ul>
+
+		<h2>通用</h2>
+		<table class="general">
+			<tr><th>字段名称</th>            <th>RFC</th><th>逐跳</th><th>值型</th><th>值可空</th><th>1.0</th><th>1.1</th><th>2</th><th>3</th><th>格式</th></tr>
+			<tr><td>accept</td>             <td>9110</td><td>✗</td><td>*</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Accept = #( media-range [ weight ] )</td></tr>
+			<tr><td>accept-encoding</td>    <td>9110</td><td>✗</td><td>*</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Accept-Encoding  = #( token / "identity" / "*" [ OWS ";" OWS "q=" qvalue ] )</td></tr>
+			<tr><td>cache-control</td>      <td>9111</td><td>✗</td><td>*</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Cache-Control = #( token [ "=" ( token / quoted-string ) ] )</td></tr>
+			<tr><td>connection</td>         <td>9110</td><td>✓</td><td>*</td><td>✗</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>Connection = #token</td></tr>
+			<tr><td>content-encoding</td>   <td>9110</td><td>✗</td><td>*</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Content-Encoding = #token</td></tr>
+			<tr><td>content-language</td>   <td>?</td><td>?</td><td>*</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Content-Language = #language-tag</td></tr>
+			<tr><td>content-length</td>     <td>9110</td><td>✗</td><td>1</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Content-Length = 1*DIGIT</td></tr>
+			<tr><td>content-location</td>   <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Content-Location = absolute-URI / partial-URI</td></tr>
+			<tr><td>content-range</td>      <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Content-Range = range-unit SP ( range-resp / unsatisfied-range )</td></tr>
+			<tr><td>content-type</td>       <td>?</td><td>✗</td><td>1</td><td>?</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Content-Type = media-type</td></tr>
+			<tr><td>date</td>               <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Date = HTTP-date</td></tr>
+			<tr><td>keep-alive</td>         <td>?</td><td>✓</td><td>*</td><td>?</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>Keep-Alive = #parameter</td></tr>
+			<tr><td>trailer</td>            <td>?</td><td>?</td><td>*</td><td>✗</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Trailer = #field-name</td></tr>
+			<tr><td>transfer-encoding</td>  <td>9112</td><td>✓</td><td>*</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td><td>✗</td><td>Transfer-Encoding = #transfer-coding</td></tr>
+			<tr><td>upgrade</td>            <td>?</td><td>✓</td><td>*</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td><td>✗</td><td>Upgrade = #protocol</td></tr>
+			<tr><td>via</td>                <td>9110</td><td>?</td><td>*</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Via = #( received-protocol RWS received-by [ RWS comment ] )</td></tr>
+			<tr><th>字段名称</th>            <th>RFC</th><th>逐跳</th><th>值型</th><th>值可空</th><th>1.0</th><th>1.1</th><th>2</th><th>3</th><th>格式</th></tr>
+		</table>
+
+		<h2>请求</h2>
+		<table class="request">
+			<tr><th>字段名称</th>            <th>RFC</th><th>逐跳</th><th>值型</th><th>值可空</th><th>1.0</th><th>1.1</th><th>2</th><th>3</th><th>格式</th></tr>
+			<tr><td>:authority</td>         <td>9113</td><td>✗</td><td>1</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>host [ ":" port ]</td></tr>
+			<tr><td>:method</td>            <td>9113</td><td>✗</td><td>1</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>token</td></tr>
+			<tr><td>:path</td>              <td>9113</td><td>✗</td><td>1</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>origin-form / absolute-form / authority-form / asterisk-form</td></tr>
+			<tr><td>:protocol</td>          <td>8441</td><td>?</td><td>1</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>?</td></tr>
+			<tr><td>:scheme</td>            <td>9113</td><td>✗</td><td>1</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>"http" / "https"</td></tr>
+			<tr><td>accept-language</td>    <td>9110</td><td>?</td><td>*</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Accept-Language = #( language-range [ weight ] )</td></tr>
+			<tr><td>authorization</td>      <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Authorization = credentials</td></tr>
+			<tr><td>cookie</td>             <td>6265</td><td>✗</td><td>1/+</td><td>?</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>cookie-header = "Cookie:" OWS cookie-string OWS</td></tr>
+			<tr><td>expect</td>             <td>9110</td><td>✗</td><td>*</td><td>?</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>Expect = #expectation</td></tr>
+			<tr><td>forwarded</td>          <td>?</td><td>?</td><td>+</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Forwarded = 1#forwarded-element</td></tr>
+			<tr><td>host</td>               <td>?</td><td>✗</td><td>1</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Host = uri-host [ ":" port ]</td></tr>
+			<tr><td>if-match</td>           <td>?</td><td>?</td><td>*</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>If-Match = "*" / #entity-tag</td></tr>
+			<tr><td>if-modified-since</td>  <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>If-Modified-Since = HTTP-date</td></tr>
+			<tr><td>if-none-match</td>      <td>?</td><td>?</td><td>*</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>If-None-Match = "*" / #entity-tag</td></tr>
+			<tr><td>if-range</td>           <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>If-Range = entity-tag / HTTP-date</td></tr>
+			<tr><td>if-unmodified-since</td><td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>If-Unmodified-Since = HTTP-date</td></tr>
+			<tr><td>max-forwards</td>       <td>9110</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Max-Forwards = 1*DIGIT</td></tr>
+			<tr><td>proxy-authorization</td><td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Proxy-Authorization = credentials</td></tr>
+			<tr><td>range</td>              <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Range = ranges-specifier</td></tr>
+			<tr><td>referer</td>            <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Referer = absolute-URI / partial-URI</td></tr>
+			<tr><td>te</td>                 <td>?</td><td>✓</td><td>*</td><td>?</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td><td>TE = [ t-codings *( OWS "," OWS t-codings ) ]</td></tr>
+			<tr><td>user-agent</td>         <td>?</td><td>?</td><td>1</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><th>字段名称</th>            <th>RFC</th><th>逐跳</th><th>值型</th><th>值可空</th><th>1.0</th><th>1.1</th><th>2</th><th>3</th><th>格式</th></tr>
+		</table>
+
+		<h2>响应</h2>
+		<table class="response">
+			<tr><th>字段名称</th>            <th>RFC</th><th>逐跳</th><th>值型</th><th>值可空</th><th>1.0</th><th>1.1</th><th>2</th><th>3</th><th>格式</th></tr>
+			<tr><td>:status</td>            <td>?</td><td>✗</td><td>1</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td><td>3DIGIT</td></tr>
+			<tr><td>accept-ranges</td>      <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Accept-Ranges = 1#range-unit</td></tr>
+			<tr><td>age</td>                <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>allow</td>              <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>alt-svc</td>            <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>cache-status</td>       <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>cdn-cache-control</td>  <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>content-disposition</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>etag</td>               <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>ETag = [ weak ] opaque-tag</td></tr>
+			<tr><td>expires</td>            <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>last-modified</td>      <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Last-Modified = HTTP-date</td></tr>
+			<tr><td>location</td>           <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>Location = URI-reference</td></tr>
+			<tr><td>proxy-authenticate</td> <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>proxy-status</td>       <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>retry-after</td>        <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>server</td>             <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>set-cookie</td>         <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>vary</td>               <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><td>www-authenticate</td>   <td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>
+			<tr><th>字段名称</th>            <th>RFC</th><th>逐跳</th><th>值型</th><th>值可空</th><th>1.0</th><th>1.1</th><th>2</th><th>3</th><th>格式</th></tr>
+		</table>
+
+	</body>
+</html>

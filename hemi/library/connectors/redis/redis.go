@@ -1,0 +1,20 @@
+// Copyright (c) 2020-2025 Zhang Jingcheng <diogin@gmail.com>.
+// All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+// Redis driver implementation.
+
+package redis
+
+type Redis struct {
+	address string
+}
+
+func New(conn any) *Redis {
+	redis := new(Redis)
+	return redis
+}
+
+func (c *Redis) Close() error {
+	return nil
+}

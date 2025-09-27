@@ -1,0 +1,41 @@
+NAMING
+======
+
+  Explicit private names
+  ----------------------
+
+      _adoptMatch
+      _adoptSince
+
+  Special types
+  -------------
+
+    parent types:
+
+      httpServer_
+
+    mixin types:
+
+      _client_
+
+
+COMPONENTS
+==========
+
+  [stage]
+    fixture (clock, fcache, resolv, ...)
+    backend (http1Backend, tcpxBackend, ...)
+      <node> (http1Node, tcpxNode, ...)
+    router (quixRouter, tcpxRouter, udpxRouter)
+      dealet (quixProxy, tcpxProxy, udpxProxy, ...)
+      [case]
+    [service]
+    hstate (filesysHstate, redisHstate, ...)
+    hcache (filesysHcache, memoryHcache, ...)
+    [webapp]
+      handlet (hello, static, ...)
+      reviser (gzip, head, ...)
+      socklet (hello, ...)
+      [rule]
+    server (httpxServer, hrpcServer, echoServer, ...)
+    cronjob (stat, clean, ...)

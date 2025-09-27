@@ -1,0 +1,20 @@
+// Copyright (c) 2020-2025 Zhang Jingcheng <diogin@gmail.com>.
+// All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+// Misc types and functions for Windows.
+
+package system
+
+import (
+	"fmt"
+)
+
+func Check() bool {
+	// >= Windows 10?
+	return true
+}
+
+func Advise() {
+	fmt.Println("not implemented")
+}

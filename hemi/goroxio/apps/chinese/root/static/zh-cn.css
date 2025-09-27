@@ -1,0 +1,22 @@
+nav{
+	float:left;
+	width:10%;
+}
+main{
+	float:left;
+	width:90%;
+}
+@media (max-width:600px){
+	nav{
+		width:20%;
+	}
+	main{
+		width:80%;
+	}
+}
+main > h1{
+	background:#ca8;
+}
+footer{
+	clear:left;
+}

@@ -1,0 +1,98 @@
+<style type="text/css">
+article {
+	font-family: sans-serif;
+}
+article li {
+	list-style-type: none;
+}
+article h3{
+	padding:5px;
+	color:#fff;
+	background:#678;
+}
+article pre {
+	display: block;
+	padding: 10px;
+	background: #eee;
+}
+article .list {
+	background: #ddd;
+}
+</style>
+
+<article>
+<h2>操作手册</h2>
+<p>本文描述如何操作 Gorox。</p>
+<p>如果您是一位开发者，在阅读完本文后，还希望了解如何使用 Gorox 进行 Web 应用或 RPC 服务开发，那么请继续阅读<a href="/docs/developer">开发者手册</a>。</p>
+
+	<h3>目录</h3>
+	<ol>
+		<li><a href="#build-install">构建与安装</a></li>
+		<li><a href="#running-mode">运行模式</a></li>
+		<li><a href="#control">启动、退出、重启与升级</a></li>
+		<li><a href="#configure">配置</a></li>
+	</ol>
+
+	<h3 id="build-install">构建与安装</h3>
+	<p>在构建 Gorox 前，请确保您的操作系统符合以下要求：</p>
+	<ul class="list">
+		<li>Linux 内核版本 &gt;= 3.9</li>
+		<li>FreeBSD &gt;= 12.0</li>
+		<li>苹果 macOS &gt;= Catalina</li>
+		<li>微软 Windows &gt;= 10</li>
+	</ul>
+	<p>以及您的 CPU 架构符合以下要求：</p>
+	<ul class="list">
+		<li>AMD64，也称为 x64，x86-64，Intel 64</li>
+		<li>ARM64，也称为 AArch64</li>
+		<li>RISCV64，也称为 RV64</li>
+		<li>Loong64，也称为 LoongArch64</li>
+	</ul>
+	<p>然后，请确保您安装了 Go &gt;= 1.22 版本：</p>
+	<pre>shell&gt; go version</pre>
+
+		<h4>构建</h4>
+		<p>进入 Gorox 目录，使用以下命令构建 Gorox：</p>
+		<pre>shell&gt; go build</pre>
+		<p>如果报错，请设置环境变量 CGO_ENABLED=0 再试一次：</p>
+		<pre>shell&gt; go env -w CGO_ENABLED=0
+shell&gt; go build</pre>
+
+		<h4>安装</h4>
+		<p>在您构建成功，或者下载了二进制版本后，直接把 gorox 所在的整个目录移动到您想要存放的位置，即可。</p>
+
+	<h3 id="running-mode">运行模式</h3>
+	<p>Gorox 具备两种运行模式，一种是充当服务器用的服务器模式，另一种是充当客户端用的客户端模式。</p>
+
+		<h4>服务器模式</h4>
+		<p>正如您所希望的那样，Gorox 可以以服务器进程的方式运行。如果您加了“-daemon”选项，它可以进入后台运行，如果不加，则默认在前台运行。</p>
+
+		<h4>客户端模式</h4>
+		<p>在客户端模式下，Gorox 充当一个控制客户端，用于控制另一个在服务器模式下运行的 Gorox 进程。</p>
+
+	<h3 id="control">启动、退出、重启与升级</h3>
+	<p>TODO</p>
+
+		<h4>启动</h4>
+		<p>以前台模式启动 Gorox 服务器：</p>
+		<pre>shell&gt; ./gorox</pre>
+		<p>以后台模式启动 Gorox 服务器：</p>
+		<pre>shell&gt; ./gorox -daemon</pre>
+		<p>以后台模式启动 Gorox 服务器后，可以运行以下命令检查 leader 进程和 worker 进程是否启动成功：</p>
+		<pre>shell&gt; ./gorox pids</pre>
+
+		<h4>退出</h4>
+		<p>运行一个客户端模式的 Gorox，可以告知当前正在运行的处于服务器模式的 Gorox 进程退出运行：</p>
+		<pre>shell&gt; ./gorox quit</pre>
+
+		<h4>重启</h4>
+		<p>通常来说，我们都是为了重启 worker 进程。使用以下命令重启 worker 进程：</p>
+		<pre>shell&gt; ./gorox rework</pre>
+
+		<h4>升级</h4>
+		<p>TODO</p>
+
+	<h3 id="configure">配置</h3>
+	<p>TODO</p>
+
+</article>

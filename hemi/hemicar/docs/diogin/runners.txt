@@ -1,0 +1,26 @@
+leader 进程
+
+  leader.Main() 和 workerKeeper() 并发，还有 worker.watch() 并发
+  rockmanClient(), webuiServer(), cmduiServer() 并发
+
+worker 进程
+
+  多个 fixture.run() 并发
+  多个 backend.Maintain() 并发
+    每个 backend 有多个 node.Maintain() 并发
+  多个 router.serve() 并发
+    每个 router 有多个 gate.serve() 并发
+      每个 gate 有多个 gate.router.serveConn(conn) 并发
+  多个 service.maintain() 并发
+  多个 hstate.Maintain() 并发
+  多个 hcache.Maintain() 并发
+  多个 webapp.maintain() 并发
+  多个 server.Serve() 并发
+    每个 server 有多个 gate.serve() 并发
+      每个 gate 有多个 gate.server.serveConn() 并发
+      每个 http/2 conn 有一个 manage() 和一个 receive() 并发
+        每个 http/2 conn 有多个 http/2 stream.execute() 并发
+      每个 http/3 conn 并发模型待定
+  多个 cronjob.Schedule() 并发
+
+  多个 logger.saver() 并发

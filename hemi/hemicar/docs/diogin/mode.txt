@@ -1,0 +1,21 @@
+exchan mode
+===========
+
+  request/response
+
+  through handlet
+  ---------------
+
+    client  ---http/1/2/3-->  handlet
+    client  ---http/1/2/3-->  reverse proxy  ---http/1/2/3/fcgi-->  backend
+
+socket mode
+===========
+
+  upgrade: websocket
+
+  through socklet
+  ---------------
+
+    client  ---ws/1/2/3-->  socklet
+    client  ---ws/1/2/3-->  proxy socklet  ---ws-->  socklet

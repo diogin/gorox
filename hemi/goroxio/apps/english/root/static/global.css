@@ -1,0 +1,20 @@
+*{
+	box-sizing:border-box;
+	margin:0;
+	padding:0;
+}
+html{
+	background:#333;
+}
+body{
+	max-width:960px;
+	margin:auto;
+	font-family:Sans-Serif;
+	background:#f0f0f0;
+}
+ul{
+	list-style-type:none;
+}
+a{
+	text-decoration:none;
+}

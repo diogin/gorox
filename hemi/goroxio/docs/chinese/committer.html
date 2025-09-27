@@ -1,0 +1,55 @@
+<style type="text/css">
+article h3{
+	padding:5px;
+	color:#fff;
+	background:#678;
+}
+</style>
+
+<article>
+<h2>贡献者手册</h2>
+<p>本文档介绍 Gorox 的架构设计。</p>
+
+	<h3>目录</h3>
+	<ol>
+		<li>产品功能</li>
+		<li>概念和术语</li>
+		<li>功能体系</li>
+	</ol>
+
+	<h3>产品功能</h3>
+	<p>Gorox 是一款务实的 Web 应用服务器、RPC 框架和网络代理。</p>
+	<p>由于 Gorox 高度灵活的架构设计，它具有非常强大的扩展能力，可以基于它开发各类服务。</p>
+
+	<h3>概念和术语</h3>
+	<p>在了解 Gorox 架构之前，需要先定义 Gorox 里使用的一些基本概念和术语。这些概念和术语可能在别的地方有不同的含义，但是在 Gorox 里，我们有如下定义：</p>
+	<dl>
+		<dt>Web 应用服务器</dt>
+		<dd>TODO</dd>
+		<dt>RPC 框架</dt>
+		<dd>TODO</dd>
+		<dt>网络代理</dt>
+		<dd>TODO</dd>
+	</dl>
+
+	<h3>功能体系</h3>
+
+		<h4>Router 和 Server</h4>
+		<p>Gorox 的前端部分有两套子系统：Router 子系统和 Server 子系统。</p>
+		<p>Router 子系统涵盖的元素有：Router、Gate、Conn、Case、Dealet，用于实现 L4 代理以及非 Web 的 L7 代理。</p>
+		<p>Server 子系统包含通用体系、Web 体系和 RPC 体系，其中：</p>
+		<ul>
+			<li>通用体系涵盖的元素有：Server、Gate、Conn，用于开发者自行发挥实现各种通用服务器（例如 FTP 服务器、聊天服务器等）；</li>
+			<li>Web 体系涵盖的元素有：Server、Gate、Conn、Stream、Request、Response、Socket、Webapp、Rule、Handlet、Reviser、Socklet，用于实现 Web 服务器、Web 应用、Web 代理等；</li>
+			<li>RPC 体系涵盖的元素有：Server、Gate、Call、Req、Resp、Service、Bundlet，用于实现 RPC 服务。</li>
+		</ul>
+
+		<h4>Backend</h4>
+		<p>Gorox 的后端部分为 Backend 子系统，包含通用体系、Web 体系和 RPC 体系，其中：</p>
+		<ul>
+			<li>通用体系涵盖的元素有：Backend、Node、Conn，主要由 Router 前端子系统使用；</li>
+			<li>Web 体系涵盖的元素有：Backend、Node、Conn、Stream、Request、Response、Socket，主要由 Web 前端体系使用；</li>
+			<li>RPC 体系涵盖的元素有：Backend、Node、Call、Req、Resp，主要由 RPC 前端体系使用。</li>
+		</ul>
+
+</article>
