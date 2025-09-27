@@ -164,6 +164,8 @@ type Component interface {
 	MakeComp(compName string)
 	CompName() string
 
+	OnShutdown()
+
 	OnConfigure()
 	Find(propName string) (propValue Value, ok bool)
 	Prop(propName string) (propValue Value, ok bool)
@@ -182,14 +184,13 @@ type Component interface {
 
 	OnPrepare()
 
-	OnShutdown()
-
 	setName(compName string)
 	setShell(shell Component)
 	setParent(parent Component)
-	getParent() Component
 	setInfo(info any)
 	setProp(propName string, propValue Value)
+
+	getParent() Component
 }
 
 // Component_ is a parent.
@@ -295,10 +296,11 @@ func (c *Component_) LoopRun(interval time.Duration, callback func(now time.Time
 
 func (c *Component_) setShell(shell Component)                 { c.shell = shell }
 func (c *Component_) setParent(parent Component)               { c.parent = parent }
-func (c *Component_) getParent() Component                     { return c.parent }
 func (c *Component_) setName(compName string)                  { c.compName = compName }
 func (c *Component_) setProp(propName string, propValue Value) { c.props[propName] = propValue }
 func (c *Component_) setInfo(info any)                         { c.info = info }
+
+func (c *Component_) getParent() Component { return c.parent }
 
 // compDict
 type compDict[T Component] map[string]T
@@ -706,10 +708,10 @@ func (s *Stage) Start(id int32) {
 		Println("bind services and webapps to servers")
 	}
 	for _, server := range s.servers {
-		if rpcServer, ok := server.(RPCServer); ok {
-			rpcServer.BindServices()
-		} else if webServer, ok := server.(HTTPServer); ok {
-			webServer.bindWebapps()
+		if hrpcServer, ok := server.(*HRPCServer); ok {
+			hrpcServer.BindServices()
+		} else if httpServer, ok := server.(HTTPServer); ok {
+			httpServer.bindWebapps()
 		}
 	}
 

@@ -15,14 +15,14 @@ import (
 
 func init() {
 	RegisterServer("hrpcServer", func(compName string, stage *Stage) Server {
-		s := new(hrpcServer)
+		s := new(HRPCServer)
 		s.onCreate(compName, stage)
 		return s
 	})
 }
 
-// hrpcServer is the HRPC server. An hrpcServer has many hrpcGates.
-type hrpcServer struct {
+// HRPCServer is the HRPC server. An HRPCServer has many hrpcGates.
+type HRPCServer struct {
 	// Parent
 	Server_[*hrpcGate]
 	// Mixins
@@ -39,11 +39,11 @@ type hrpcServer struct {
 	maxConcurrentConnsPerGate int32                   // max concurrent connections allowed per gate
 }
 
-func (s *hrpcServer) onCreate(compName string, stage *Stage) {
+func (s *HRPCServer) onCreate(compName string, stage *Stage) {
 	s.Server_.OnCreate(compName, stage)
 }
 
-func (s *hrpcServer) OnConfigure() {
+func (s *HRPCServer) OnConfigure() {
 	s.Server_.OnConfigure()
 	s._hrpcHolder_.onConfigure(s)
 
@@ -74,14 +74,14 @@ func (s *hrpcServer) OnConfigure() {
 		return errors.New(".maxConcurrentConnsPerGate has an invalid value")
 	}, 10000)
 }
-func (s *hrpcServer) OnPrepare() {
+func (s *HRPCServer) OnPrepare() {
 	s.Server_.OnPrepare()
 	s._hrpcHolder_.onPrepare(s)
 }
 
-func (s *hrpcServer) MaxConcurrentConnsPerGate() int32 { return s.maxConcurrentConnsPerGate }
+func (s *HRPCServer) MaxConcurrentConnsPerGate() int32 { return s.maxConcurrentConnsPerGate }
 
-func (s *hrpcServer) BindServices() {
+func (s *HRPCServer) BindServices() {
 	for _, serviceName := range s.services {
 		service := s.stage.Service(serviceName)
 		if service == nil {
@@ -102,7 +102,7 @@ func (s *hrpcServer) BindServices() {
 		}
 	}
 }
-func (s *hrpcServer) findService(hostname []byte) *Service {
+func (s *HRPCServer) findService(hostname []byte) *Service {
 	// TODO: use hash table?
 	for _, exactMap := range s.exactServices {
 		if bytes.Equal(hostname, exactMap.hostname) {
@@ -124,16 +124,16 @@ func (s *hrpcServer) findService(hostname []byte) *Service {
 	return nil
 }
 
-func (s *hrpcServer) Serve() { // runner
+func (s *HRPCServer) Serve() { // runner
 	// TODO
 }
 
-func (s *hrpcServer) hrpcHolder() _hrpcHolder_ { return s._hrpcHolder_ }
+func (s *HRPCServer) hrpcHolder() _hrpcHolder_ { return s._hrpcHolder_ }
 
-// hrpcGate is a gate of hrpcServer.
+// hrpcGate is a gate of HRPCServer.
 type hrpcGate struct {
 	// Parent
-	Gate_[*hrpcServer]
+	Gate_[*HRPCServer]
 	// Mixins
 	_hrpcHolder_
 	// States
@@ -141,7 +141,7 @@ type hrpcGate struct {
 	concurrentConns    atomic.Int32
 }
 
-func (g *hrpcGate) onNew(server *hrpcServer, id int32) {
+func (g *hrpcGate) onNew(server *HRPCServer, id int32) {
 	g.Gate_.OnNew(server, id)
 	g._hrpcHolder_ = server.hrpcHolder()
 	g.maxConcurrentConns = server.MaxConcurrentConnsPerGate()
@@ -182,8 +182,6 @@ func (c *hrpcConn) onPut() {
 func (c *hrpcConn) MakeTempName(dst []byte, unixTime int64) int {
 	return makeTempName(dst, c.gate.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
-
-//func (c *hrpcConn) rpcServer() *hrpcServer { return c.server }
 
 // hrpcCall
 type hrpcCall struct {

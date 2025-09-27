@@ -11,14 +11,6 @@ import (
 	"time"
 )
 
-// RPCServer
-type RPCServer interface {
-	// Imports
-	Server
-	// Methods
-	BindServices()
-}
-
 // Service is the RPC service.
 type Service struct {
 	// Parent
@@ -26,8 +18,8 @@ type Service struct {
 	// Mixins
 	_accessLogger_
 	// Assocs
-	stage   *Stage      // current stage
-	servers []RPCServer // bound rpc servers. may be empty
+	stage   *Stage        // current stage
+	servers []*HRPCServer // bound hrpc servers. may be empty
 	// States
 	hostnames       [][]byte           // ...
 	maxContentSize  int64              // max content size allowed
@@ -78,8 +70,8 @@ func (s *Service) maintain() { // runner
 	s.stage.DecService()
 }
 
-func (s *Service) BindServer(server RPCServer) { s.servers = append(s.servers, server) }
-func (s *Service) Servers() []RPCServer        { return s.servers }
+func (s *Service) BindServer(server *HRPCServer) { s.servers = append(s.servers, server) }
+func (s *Service) Servers() []*HRPCServer        { return s.servers }
 
 /*
 func (s *Service) dispatch(exchan) {

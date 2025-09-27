@@ -72,7 +72,7 @@ func (h *_holder_) ReadTimeout() time.Duration  { return h.readTimeout }
 func (h *_holder_) WriteTimeout() time.Duration { return h.writeTimeout }
 
 // _accessLogger_ is a mixin.
-type _accessLogger_ struct {
+type _accessLogger_ struct { // for router_, Webapp, and Service
 	// States
 	useLogger string    // "noop", "simple", ...
 	logConfig LogConfig // used to configure logger
