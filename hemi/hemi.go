@@ -16,8 +16,8 @@ import (
 const Version = "0.3.0"
 
 var (
-	_develMode  atomic.Bool
-	_debugLevel atomic.Int32
+	_develMode  atomic.Bool  // running in developer mode?
+	_debugLevel atomic.Int32 // the more of the level, the more verbose
 	_topDir     atomic.Value // directory of the executable
 	_topOnce    sync.Once    // protects _topDir
 	_logDir     atomic.Value // directory of the log files
@@ -60,7 +60,6 @@ func SetVarDir(dir string) { // only once!
 		_mustMkdir(dir)
 	})
 }
-
 func _mustMkdir(dir string) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -78,7 +77,6 @@ func StageFromFile(configBase string, configFile string) (*Stage, error) {
 	var c configurator
 	return c.stageFromFile(configBase, configFile)
 }
-
 func _checkDirs() {
 	if _topDir.Load() == nil || _logDir.Load() == nil || _tmpDir.Load() == nil || _varDir.Load() == nil {
 		UseExitln("topDir, logDir, tmpDir, and varDir must all be set!")
@@ -93,13 +91,10 @@ const ( // exit codes
 
 func BugExitln(v ...any)          { _exitln(CodeBug, "[BUG] ", v...) }
 func BugExitf(f string, v ...any) { _exitf(CodeBug, "[BUG] ", f, v...) }
-
 func UseExitln(v ...any)          { _exitln(CodeUse, "[USE] ", v...) }
 func UseExitf(f string, v ...any) { _exitf(CodeUse, "[USE] ", f, v...) }
-
 func EnvExitln(v ...any)          { _exitln(CodeEnv, "[ENV] ", v...) }
 func EnvExitf(f string, v ...any) { _exitf(CodeEnv, "[ENV] ", f, v...) }
-
 func _exitln(exitCode int, prefix string, v ...any) {
 	fmt.Fprint(os.Stderr, prefix)
 	fmt.Fprintln(os.Stderr, v...)
