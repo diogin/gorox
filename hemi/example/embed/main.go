@@ -10,7 +10,7 @@ import (
 
 	. "github.com/diogin/gorox/hemi"
 
-	_ "github.com/diogin/gorox/hemi/builtin"
+	_ "github.com/diogin/gorox/hemi/builtin" // the standard exts
 )
 
 func main() {
