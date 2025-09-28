@@ -1,1 +1,1 @@
-Place useful tools.
+Place useful tools for developing the Hemi Engine.

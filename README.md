@@ -201,7 +201,7 @@ A typical deployment architecture using Gorox might looks like this:
 |   http        |   |  |        tcp      |
 |      +--------+   |  +--------+        |
 |      |            |           |        |
-|      v           rpc          v        |
+|      v          hrpc          v        |
 |   +------+        |      +---------+   |
 |   | app1 +----+   |   +--+ server1 |   |
 |   +------+    |   |   |  +----+----+   |
