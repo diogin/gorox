@@ -73,6 +73,7 @@ over:
 	l.clear()
 	l.file.Close()
 }
+
 func (l *simpleLogger) write(s string) {
 	n := len(s)
 	if n >= l.size {

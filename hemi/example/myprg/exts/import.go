@@ -1,6 +1,6 @@
 package exts
 
-import _ "github.com/diogin/gorox/hemi/builtin" // the standard exts
+import _ "github.com/diogin/gorox/hemi/plugins/builtin" // the standard exts
 
 import ( // import contrib exts here
 )

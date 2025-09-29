@@ -697,8 +697,8 @@ func (h *Handlet_) DispatchHandle(req ServerRequest, resp ServerResponse, notFou
 			return
 		}
 		if handleName := h.mapper.HandleName(req); handleName != "" {
-			if rMethod := h.rShell.MethodByName(handleName); rMethod.IsValid() {
-				rMethod.Call([]reflect.Value{reflect.ValueOf(req), reflect.ValueOf(resp)})
+			if rHandle := h.rShell.MethodByName(handleName); rHandle.IsValid() {
+				rHandle.Call([]reflect.Value{reflect.ValueOf(req), reflect.ValueOf(resp)})
 				return
 			}
 		}

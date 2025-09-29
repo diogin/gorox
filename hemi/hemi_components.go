@@ -705,10 +705,10 @@ func (s *Stage) Start(id int32) {
 		Println("bind services and webapps to servers")
 	}
 	for _, server := range s.servers {
-		if hrpcServer, ok := server.(*HRPCServer); ok {
-			hrpcServer.BindServices()
-		} else if httpServer, ok := server.(HTTPServer); ok {
-			httpServer.bindWebapps()
+		if rpcServer, ok := server.(*hrpcServer); ok {
+			rpcServer.bindServices()
+		} else if webServer, ok := server.(HTTPServer); ok {
+			webServer.bindWebapps()
 		}
 	}
 

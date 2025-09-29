@@ -6,11 +6,11 @@
 
 package exts
 
-import _ "github.com/diogin/gorox/hemi/builtin" // the standard exts
+import _ "github.com/diogin/gorox/hemi/plugins/builtin" // the standard exts
 
 import ( // import contrib exts here
-	_ "github.com/diogin/gorox/hemi/contrib/handlets/access1"
-	_ "github.com/diogin/gorox/hemi/contrib/handlets/referer1"
+	_ "github.com/diogin/gorox/hemi/plugins/contrib/handlets/access1"
+	_ "github.com/diogin/gorox/hemi/plugins/contrib/handlets/referer1"
 )
 
 import ( // import vendor exts here

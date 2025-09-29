@@ -1,7 +1,7 @@
 package myapp
 
 import (
-	"github.com/diogin/gorox/hemi/builtin/mappers/simple"
+	"github.com/diogin/gorox/hemi/plugins/builtin/mappers/simple"
 
 	. "github.com/diogin/gorox/hemi"
 )

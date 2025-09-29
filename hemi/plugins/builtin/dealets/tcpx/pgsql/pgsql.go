@@ -8,7 +8,7 @@ package pgsql
 
 import (
 	. "github.com/diogin/gorox/hemi"
-	. "github.com/diogin/gorox/hemi/builtin/backends/pgsql"
+	. "github.com/diogin/gorox/hemi/plugins/builtin/backends/pgsql"
 )
 
 func init() {

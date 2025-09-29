@@ -5,7 +5,7 @@
 package english
 
 import (
-	"github.com/diogin/gorox/hemi/builtin/handlets/sitex"
+	"github.com/diogin/gorox/hemi/plugins/builtin/handlets/sitex"
 
 	. "github.com/diogin/gorox/hemi"
 )

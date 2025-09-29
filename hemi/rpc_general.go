@@ -10,7 +10,7 @@
 package hemi
 
 // _hrpcHolder_
-type _hrpcHolder_ struct { // for hrpcClient, HRPCServer, and hrpcGate
+type _hrpcHolder_ struct { // for hrpcClient, hrpcServer, and hrpcGate
 }
 
 func (h *_hrpcHolder_) onConfigure(comp Component) {

@@ -19,12 +19,12 @@ var (
 
 func init() {
 	// set public variables
-	path, err := os.Executable()
+	exePath, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
-	ExePath = path
-	ExeDir = filepath.Dir(path)
+	ExePath = exePath
+	ExeDir = filepath.Dir(exePath)
 	if runtime.GOOS == "windows" { // change '\\' to '/'
 		ExePath = filepath.ToSlash(ExePath)
 		ExeDir = filepath.ToSlash(ExeDir)

@@ -8,7 +8,7 @@ package gunzip
 
 import (
 	. "github.com/diogin/gorox/hemi"
-	. "github.com/diogin/gorox/hemi/builtin/revisers"
+	. "github.com/diogin/gorox/hemi/plugins/builtin/revisers"
 )
 
 func init() {

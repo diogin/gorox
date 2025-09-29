@@ -19,7 +19,7 @@ type Service struct {
 	_accessLogger_ // services can log accesses
 	// Assocs
 	stage   *Stage        // current stage
-	servers []*HRPCServer // bound hrpc servers. may be empty
+	servers []*hrpcServer // bound hrpc servers. may be empty
 	// States
 	hostnames       [][]byte           // ...
 	maxContentSize  int64              // max content size allowed
@@ -70,8 +70,7 @@ func (s *Service) maintain() { // runner
 	s.stage.DecService()
 }
 
-func (s *Service) BindServer(server *HRPCServer) { s.servers = append(s.servers, server) }
-func (s *Service) Servers() []*HRPCServer        { return s.servers }
+func (s *Service) bindServer(server *hrpcServer) { s.servers = append(s.servers, server) }
 
 /*
 func (s *Service) dispatch(call) {

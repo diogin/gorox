@@ -10,7 +10,7 @@ import (
 	"errors"
 
 	. "github.com/diogin/gorox/hemi"
-	. "github.com/diogin/gorox/hemi/builtin/handlets/sitex"
+	. "github.com/diogin/gorox/hemi/plugins/builtin/handlets/sitex"
 )
 
 func init() {

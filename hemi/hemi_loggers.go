@@ -64,4 +64,5 @@ func init() {
 type noopLogger struct{}
 
 func (noopLogger) Logf(f string, v ...any) {}
-func (noopLogger) Close()                  {}
+
+func (noopLogger) Close() {}

@@ -8,7 +8,7 @@ package mysql
 
 import (
 	. "github.com/diogin/gorox/hemi"
-	. "github.com/diogin/gorox/hemi/builtin/backends/mysql"
+	. "github.com/diogin/gorox/hemi/plugins/builtin/backends/mysql"
 )
 
 func init() {

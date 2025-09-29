@@ -8,7 +8,7 @@ package redis
 
 import (
 	. "github.com/diogin/gorox/hemi"
-	. "github.com/diogin/gorox/hemi/builtin/backends/redis"
+	. "github.com/diogin/gorox/hemi/plugins/builtin/backends/redis"
 )
 
 func init() {

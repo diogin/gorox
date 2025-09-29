@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/diogin/gorox/hemi/builtin/mappers/simple"
+	"github.com/diogin/gorox/hemi/plugins/builtin/mappers/simple"
 
 	. "github.com/diogin/gorox/hemi"
 
-	_ "github.com/diogin/gorox/hemi/builtin" // the standard exts
+	_ "github.com/diogin/gorox/hemi/plugins/builtin" // the standard exts
 )
 
 func main() {
