@@ -20,27 +20,27 @@ import (
 )
 
 const ( // list of component types
-	compTypeStage      int16 = 1 + iota // stage
-	compTypeFixture                     // clock, fcache, resolv, ...
-	compTypeBackend                     // http1Backend, quixBackend, udpxBackend, ...
-	compTypeNode                        // node
-	compTypeService                     // service
-	compTypeHstate                      // filesysHstate, redisHstate, ...
-	compTypeHcache                      // filesysHcache, memoryHcache, ...
-	compTypeWebapp                      // webapp
-	compTypeRule                        // rule
-	compTypeHandlet                     // static, httpProxy, ...
-	compTypeReviser                     // gzipReviser, wrapReviser, ...
-	compTypeSocklet                     // helloSocklet, ...
-	compTypeQUIXRouter                  // quixRouter
-	compTypeTCPXRouter                  // tcpxRouter
-	compTypeUDPXRouter                  // udpxRouter
-	compTypeCase                        // case
-	compTypeQUIXDealet                  // quixProxy, ...
-	compTypeTCPXDealet                  // tcpxProxy, redisProxy, ...
-	compTypeUDPXDealet                  // udpxProxy, dnsProxy, ...
-	compTypeServer                      // http3Server, hrpcServer, echoServer, ...
-	compTypeCronjob                     // statCronjob, cleanCronjob, ...
+	compTypeStage int16 = 1 + iota
+	compTypeFixture
+	compTypeBackend
+	compTypeNode
+	compTypeService
+	compTypeHstate
+	compTypeHcache
+	compTypeWebapp
+	compTypeRule
+	compTypeHandlet
+	compTypeReviser
+	compTypeSocklet
+	compTypeQUIXRouter
+	compTypeTCPXRouter
+	compTypeUDPXRouter
+	compTypeCase
+	compTypeQUIXDealet
+	compTypeTCPXDealet
+	compTypeUDPXDealet
+	compTypeServer
+	compTypeCronjob
 )
 
 var signedComps = map[string]int16{ // signed comps. more dynamic comps are signed using _signComp() below
@@ -316,7 +316,7 @@ func (d compDict[T]) goWalk(method func(T)) {
 	}
 }
 
-// Stage represents a running stage in the engine.
+// Stage component represents a running stage in the engine.
 //
 // The engine may have many stages during its lifetime, especially when new
 // configuration is applied, a new stage is created, or the old one is told to quit.
@@ -340,7 +340,7 @@ type Stage struct {
 	cronjobs    compDict[Cronjob]     // indexed by compName
 	// States
 	id      int32
-	numCPU  int32
+	numCPU  int
 	cpuFile string
 	hepFile string
 	thrFile string
@@ -645,8 +645,8 @@ func (s *Stage) DecRouter()  { s.subs.Done() }
 func (s *Stage) DecServer()  { s.subs.Done() }
 func (s *Stage) DecCronjob() { s.subs.Done() }
 
-func (s *Stage) ID() int32     { return s.id }
-func (s *Stage) NumCPU() int32 { return s.numCPU }
+func (s *Stage) ID() int32   { return s.id }
+func (s *Stage) NumCPU() int { return s.numCPU }
 
 func (s *Stage) Clock() *clockFixture            { return s.clock }
 func (s *Stage) Fcache() *fcacheFixture          { return s.fcache }
@@ -666,7 +666,7 @@ func (s *Stage) Cronjob(compName string) Cronjob        { return s.cronjobs[comp
 
 func (s *Stage) Start(id int32) {
 	s.id = id
-	s.numCPU = int32(runtime.NumCPU())
+	s.numCPU = runtime.NumCPU()
 
 	if DebugLevel() >= 2 {
 		Printf("size of server1Conn = %d\n", unsafe.Sizeof(server1Conn{}))

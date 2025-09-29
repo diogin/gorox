@@ -135,16 +135,16 @@ func (h *Sitex) Handle(req ServerRequest, resp ServerResponse) (handled bool) {
 	rPack := reflect.New(site.pack)
 	rReq, rResp := reflect.ValueOf(req), reflect.ValueOf(resp)
 	rPack.MethodByName("Init").Call([]reflect.Value{reflect.ValueOf(site), rReq, rResp, reflect.ValueOf(method), reflect.ValueOf(action)})
-	if fn := rPack.MethodByName(method + "_" + action); fn.IsValid() {
-		if before := rPack.MethodByName("BeforeAction"); before.IsValid() {
-			before.Call(nil)
+	if methodAction := rPack.MethodByName(method + "_" + action); methodAction.IsValid() {
+		if beforeAction := rPack.MethodByName("BeforeAction"); beforeAction.IsValid() {
+			beforeAction.Call(nil)
 		}
-		fn.Call([]reflect.Value{rReq, rResp})
+		methodAction.Call([]reflect.Value{rReq, rResp})
 		if !resp.IsSent() {
 			resp.SendBytes(nil)
 		}
-		if after := rPack.MethodByName("AfterAction"); after.IsValid() {
-			after.Call(nil)
+		if afterAction := rPack.MethodByName("AfterAction"); afterAction.IsValid() {
+			afterAction.Call(nil)
 		}
 	} else {
 		site.show(req, resp, page)

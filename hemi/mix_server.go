@@ -80,7 +80,7 @@ func (s *Server_[G]) OnConfigure() {
 			return nil
 		}
 		return errors.New(".numGates has an invalid value")
-	}, s.stage.NumCPU())
+	}, int32(s.stage.NumCPU()))
 }
 func (s *Server_[G]) OnPrepare() {
 	s._holder_.onPrepare(s)

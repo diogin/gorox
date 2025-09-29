@@ -61,7 +61,7 @@ func (h *_httpHolder_) onPrepare(comp Component, perm os.FileMode) {
 func (h *_httpHolder_) MaxMemoryContentSize() int32 { return h.maxMemoryContentSize }
 
 // httpConn
-type httpConn interface { // for http[1-3]Conn
+type httpConn interface { // for *http[1-3]Conn
 	Holder() httpHolder
 	ID() int64
 	UDSMode() bool
@@ -121,7 +121,7 @@ func (c *httpConn_) markBroken()    { c.broken.Store(true) }
 func (c *httpConn_) isBroken() bool { return c.broken.Load() }
 
 // httpStream
-type httpStream interface { // for http[1-3]Stream
+type httpStream interface { // for *http[1-3]Stream
 	Holder() httpHolder
 	ID() int64
 	UDSMode() bool
