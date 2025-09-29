@@ -15,7 +15,7 @@ type router_[G Gate] struct { // for QUIXRouter, TCPXRouter, and UDPXRouter
 	// Parent
 	Server_[G]
 	// Mixins
-	_accessLogger_
+	_accessLogger_ // routers can log accesses
 }
 
 func (r *router_[G]) onCreate(compName string, stage *Stage) {

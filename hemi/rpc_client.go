@@ -8,12 +8,17 @@ package hemi
 
 // hrpcClient
 type hrpcClient struct {
+	// TODO
 }
 
 // hConn
 type hConn struct {
+	// Parent
+	// States
 }
 
 // hCall
 type hCall struct {
+	// Parent
+	// States
 }

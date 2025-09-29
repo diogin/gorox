@@ -16,7 +16,7 @@ type Service struct {
 	// Parent
 	Component_
 	// Mixins
-	_accessLogger_
+	_accessLogger_ // services can log accesses
 	// Assocs
 	stage   *Stage        // current stage
 	servers []*HRPCServer // bound hrpc servers. may be empty
@@ -74,7 +74,7 @@ func (s *Service) BindServer(server *HRPCServer) { s.servers = append(s.servers,
 func (s *Service) Servers() []*HRPCServer        { return s.servers }
 
 /*
-func (s *Service) dispatch(exchan) {
+func (s *Service) dispatch(call) {
 	// TODO
 }
 */
@@ -89,6 +89,6 @@ type Bundlet_ struct { // for all bundlets
 }
 
 /*
-func (b *Bundlet_) dispatch(exchan) {
+func (b *Bundlet_) dispatch(call) {
 }
 */

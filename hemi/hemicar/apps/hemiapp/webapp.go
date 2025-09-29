@@ -45,7 +45,7 @@ func (h *hemiappHandlet) OnPrepare() {
 }
 
 func (h *hemiappHandlet) Handle(req ServerRequest, resp ServerResponse) (handled bool) {
-	h.Dispatch(req, resp, h.notFound)
+	h.DispatchHandle(req, resp, h.notFound)
 	return true
 }
 func (h *hemiappHandlet) notFound(req ServerRequest, resp ServerResponse) {

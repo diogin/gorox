@@ -291,10 +291,12 @@ func (r *Region) Free() {
 	}
 }
 
+// poolConn
 type poolConn struct {
 	next *poolConn
 }
 
+// connPool
 type connPool struct {
 	sync.Mutex
 	head *poolConn

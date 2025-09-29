@@ -645,14 +645,11 @@ func (s *Stage) DecRouter()  { s.subs.Done() }
 func (s *Stage) DecServer()  { s.subs.Done() }
 func (s *Stage) DecCronjob() { s.subs.Done() }
 
-func (s *Stage) ID() int32   { return s.id }
-func (s *Stage) NumCPU() int { return s.numCPU }
+func (s *Stage) Clock() *clockFixture   { return s.clock }
+func (s *Stage) Fcache() *fcacheFixture { return s.fcache }
+func (s *Stage) Resolv() *resolvFixture { return s.resolv }
 
-func (s *Stage) Clock() *clockFixture            { return s.clock }
-func (s *Stage) Fcache() *fcacheFixture          { return s.fcache }
-func (s *Stage) Resolv() *resolvFixture          { return s.resolv }
-func (s *Stage) Fixture(compSign string) fixture { return s.fixtures[compSign] }
-
+func (s *Stage) Fixture(compSign string) fixture        { return s.fixtures[compSign] }
 func (s *Stage) Backend(compName string) Backend        { return s.backends[compName] }
 func (s *Stage) Service(compName string) *Service       { return s.services[compName] }
 func (s *Stage) Hstate(compName string) Hstate          { return s.hstates[compName] }
@@ -847,6 +844,9 @@ func (s *Stage) startCronjobs() {
 		go cronjob.Schedule()
 	}
 }
+
+func (s *Stage) ID() int32   { return s.id }
+func (s *Stage) NumCPU() int { return s.numCPU }
 
 func (s *Stage) ProfCPU() {
 	file, err := os.Create(s.cpuFile)

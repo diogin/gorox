@@ -52,6 +52,7 @@ func (h *_quixHolder_) MaxConcurrentStreamsPerConn() int32 { return h.maxConcurr
 
 // quixConn collects shared methods between *QUIXConn and *QConn.
 type quixConn interface {
+	// TODO
 }
 
 // quixConn_ is a parent.
@@ -107,6 +108,7 @@ func (c *quixConn_) isBroken() bool { return c.broken.Load() }
 
 // quixStream collects shared methods between *QUIXStream and *QStream.
 type quixStream interface {
+	// TODO
 }
 
 // quixStream_ is a parent.

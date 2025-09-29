@@ -31,7 +31,7 @@ func (h *myHandlet) OnConfigure() {}
 func (h *myHandlet) OnPrepare()   {}
 
 func (h *myHandlet) Handle(req ServerRequest, resp ServerResponse) (next bool) {
-	h.Dispatch(req, resp, h.notFound)
+	h.DispatchHandle(req, resp, h.notFound)
 	return
 }
 func (h *myHandlet) notFound(req ServerRequest, resp ServerResponse) {

@@ -21,7 +21,7 @@ type Webapp struct {
 	// Parent
 	Component_
 	// Mixins
-	_accessLogger_
+	_accessLogger_ // webapps can log accesses
 	// Assocs
 	stage    *Stage            // current stage
 	hstate   Hstate            // the hstate which is used by this webapp
@@ -33,19 +33,20 @@ type Webapp struct {
 	// States
 	hostnames        [][]byte          // like: ("www.example.com", "1.2.3.4", "fff8::1")
 	webRoot          string            // root dir for the web
-	file404          string            // 404 file path
+	file404          string            // 404 file path, if any
 	text404          []byte            // bytes of the default 404 file
 	tlsCertificate   string            // tls certificate file, in pem format
 	tlsPrivateKey    string            // tls private key file, in pem format
 	maxMultiformSize int64             // max content size when content type is multipart/form-data
-	settings         map[string]string // webapp settings defined and used by users
 	settingsLock     sync.RWMutex      // protects settings
+	settings         map[string]string // webapp settings defined and used by users
 	isDefault        bool              // is this webapp the default webapp of its belonging http servers?
 	exactHostnames   [][]byte          // like: ("example.com")
 	suffixHostnames  [][]byte          // like: ("*.example.com")
 	prefixHostnames  [][]byte          // like: ("www.example.*")
 	revisersByID     [256]Reviser      // for fast searching. position 0 is not used
 	numRevisers      uint8             // used number of revisersByID in this webapp
+	haveFSCheckRules bool              // ...
 }
 
 func (a *Webapp) onCreate(compName string, stage *Stage) {
@@ -196,6 +197,13 @@ func (a *Webapp) OnPrepare() {
 
 	if len(a.rules) == 0 {
 		Printf("no rules defined for webapp: '%s'\n", a.compName)
+	} else {
+		for _, rule := range a.rules {
+			if rule.checkFS {
+				a.haveFSCheckRules = true
+				break
+			}
+		}
 	}
 }
 
@@ -316,7 +324,7 @@ func (a *Webapp) Setting(name string) (value string, ok bool) {
 }
 
 func (a *Webapp) dispatchExchan(req ServerRequest, resp ServerResponse) {
-	req.makeAbsPath() // for fs check rules, if any
+	req.makeAbsPath()
 	for _, rule := range a.rules {
 		if !rule.isMatch(req) {
 			continue
@@ -332,7 +340,7 @@ func (a *Webapp) dispatchExchan(req ServerRequest, resp ServerResponse) {
 	resp.SendNotFound(a.text404)
 }
 func (a *Webapp) dispatchSocket(req ServerRequest, sock ServerSocket) {
-	req.makeAbsPath() // for fs check rules, if any
+	req.makeAbsPath()
 	for _, rule := range a.rules {
 		if !rule.isMatch(req) {
 			continue
@@ -367,6 +375,7 @@ type Rule struct {
 	patterns   [][]byte // condition patterns
 	regexps    []*regexp.Regexp
 	matcher    func(rule *Rule, req ServerRequest, value []byte) bool
+	checkFS    bool // will this rule check fs?
 }
 
 func (r *Rule) onCreate(compName string, webapp *Webapp) {
@@ -397,7 +406,8 @@ func (r *Rule) OnConfigure() {
 		}
 		if matcher, ok := ruleMatchers[cond.compare]; ok {
 			r.matcher = matcher.matcher
-			if matcher.fsCheck && r.webapp.webRoot == "" {
+			r.checkFS = matcher.fsCheck
+			if r.checkFS && r.webapp.webRoot == "" {
 				UseExitln("can't do fs check since webapp's webRoot is empty. you must set webRoot for the webapp")
 			}
 		} else {
@@ -534,7 +544,7 @@ func (r *Rule) regexpMatch(req ServerRequest, value []byte) bool { // value ~= p
 	return regexpMatch(value, r.regexps)
 }
 func (r *Rule) fileMatch(req ServerRequest, value []byte) bool { // value -f
-	pathInfo := req.getPathInfo()
+	pathInfo := req.absPathInfo()
 	return pathInfo != nil && !pathInfo.IsDir()
 }
 func (r *Rule) dirMatch(req ServerRequest, value []byte) bool { // value -d
@@ -552,11 +562,11 @@ func (r *Rule) existMatch(req ServerRequest, value []byte) bool { // value -e
 	return r.existMatchWithWebRoot(req, value)
 }
 func (r *Rule) dirMatchWithWebRoot(req ServerRequest, _ []byte) bool { // value -D
-	pathInfo := req.getPathInfo()
+	pathInfo := req.absPathInfo()
 	return pathInfo != nil && pathInfo.IsDir()
 }
 func (r *Rule) existMatchWithWebRoot(req ServerRequest, _ []byte) bool { // value -E
-	pathInfo := req.getPathInfo()
+	pathInfo := req.absPathInfo()
 	return pathInfo != nil
 }
 func (r *Rule) notEqualMatch(req ServerRequest, value []byte) bool { // value != patterns
@@ -575,15 +585,15 @@ func (r *Rule) notRegexpMatch(req ServerRequest, value []byte) bool { // value !
 	return notRegexpMatch(value, r.regexps)
 }
 func (r *Rule) notFileMatch(req ServerRequest, value []byte) bool { // value !f
-	pathInfo := req.getPathInfo()
+	pathInfo := req.absPathInfo()
 	return pathInfo == nil || pathInfo.IsDir()
 }
 func (r *Rule) notDirMatch(req ServerRequest, value []byte) bool { // value !d
-	pathInfo := req.getPathInfo()
+	pathInfo := req.absPathInfo()
 	return pathInfo == nil || !pathInfo.IsDir()
 }
 func (r *Rule) notExistMatch(req ServerRequest, value []byte) bool { // value !e
-	pathInfo := req.getPathInfo()
+	pathInfo := req.absPathInfo()
 	return pathInfo == nil
 }
 
@@ -680,7 +690,7 @@ func (h *Handlet_) UseMapper(handlet Handlet, mapper Mapper) {
 	h.mapper = mapper
 	h.rShell = reflect.ValueOf(handlet)
 }
-func (h *Handlet_) Dispatch(req ServerRequest, resp ServerResponse, notFound Handle) {
+func (h *Handlet_) DispatchHandle(req ServerRequest, resp ServerResponse, notFound Handle) {
 	if h.mapper != nil {
 		if handle := h.mapper.FindHandle(req); handle != nil {
 			handle(req, resp)

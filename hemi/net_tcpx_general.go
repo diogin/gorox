@@ -15,6 +15,7 @@ import (
 
 // tcpxHolder is the interface for _tcpxHolder_.
 type tcpxHolder interface {
+	// TODO
 }
 
 // _tcpxHolder_ is a mixin.
@@ -30,6 +31,7 @@ func (h *_tcpxHolder_) onPrepare(comp Component) {
 
 // tcpxConn collects shared methods between *TCPXConn and *TConn.
 type tcpxConn interface {
+	// TODO
 }
 
 // tcpxConn_ is a parent.

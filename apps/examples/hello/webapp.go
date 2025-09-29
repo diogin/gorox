@@ -43,11 +43,11 @@ func (h *helloHandlet) OnPrepare() {
 	m.GET("/", h.index)
 	m.Map("/foo", h.handleFoo)
 
-	h.UseMapper(h, m) // equip handlet with a mapper so it can call handles automatically through Dispatch()
+	h.UseMapper(h, m) // equip handlet with a mapper so it can call handles automatically through DispatchHandle()
 }
 
 func (h *helloHandlet) Handle(req ServerRequest, resp ServerResponse) (handled bool) {
-	h.Dispatch(req, resp, h.notFound)
+	h.DispatchHandle(req, resp, h.notFound)
 	return true
 }
 func (h *helloHandlet) notFound(req ServerRequest, resp ServerResponse) {

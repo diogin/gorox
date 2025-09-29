@@ -70,3 +70,36 @@ func (j *statCronjob) Schedule() { // runner
 	}
 	j.stage.DecCronjob()
 }
+
+func init() {
+	RegisterCronjob("demoCronjob", func(compName string, stage *Stage) Cronjob {
+		j := new(demoCronjob)
+		j.onCreate(compName, stage)
+		return j
+	})
+}
+
+// demoCronjob
+type demoCronjob struct {
+	// Parent
+	Cronjob_
+	// States
+}
+
+func (j *demoCronjob) onCreate(compName string, stage *Stage) {
+	j.Cronjob_.OnCreate(compName, stage)
+}
+func (j *demoCronjob) OnShutdown() { close(j.ShutChan) } // notifies Schedule()
+
+func (j *demoCronjob) OnConfigure() {}
+func (j *demoCronjob) OnPrepare()   {}
+
+func (j *demoCronjob) Schedule() { // runner
+	j.LoopRun(time.Minute, func(now time.Time) {
+		// TODO
+	})
+	if DebugLevel() >= 2 {
+		Printf("demoCronjob=%s done\n", j.CompName())
+	}
+	j.stage.DecCronjob()
+}

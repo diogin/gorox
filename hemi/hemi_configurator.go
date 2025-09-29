@@ -876,102 +876,6 @@ type ruleCond struct {
 	patterns []string // ("GET", "POST"), ("https"), ("abc.com"), ("/hello", "/world")
 }
 
-const ( // list of tokens. if you change this list, change tokenNames too.
-	// Components
-	tokenComponent = 1 + iota // stage, webapp, ...
-	// Properties
-	tokenProperty // .listen, .maxSize, ...
-	// Operators
-	tokenLeftBrace    // {
-	tokenRightBrace   // }
-	tokenLeftBracket  // [
-	tokenRightBracket // ]
-	tokenLeftParen    // (
-	tokenRightParen   // )
-	tokenComma        // ,
-	tokenColon        // :
-	tokenPlus         // +
-	tokenEqual        // =
-	tokenCompare      // ==, ^=, $=, *=, ~=, !=, !^, !$, !*, !~
-	tokenFSCheck      // -f, -d, -e, -D, -E, !f, !d, !e
-	tokenAND          // &&
-	tokenOR           // ||
-	// Values
-	tokenBool     // true, false
-	tokenInteger  // 123, 16K, 256M, ...
-	tokenString   // "", "abc", `def`, ...
-	tokenDuration // 1s, 2m, 3h, 4d, ...
-	tokenList     // lists: (...)
-	tokenDict     // dicts: [...]
-	tokenVariable // $method, $path, ...
-)
-
-var tokenNames = [...]string{ // token names. if you change this list, change token list too.
-	// Components
-	tokenComponent: "component",
-	// Properties
-	tokenProperty: "property",
-	// Operators
-	tokenLeftBrace:    "leftBrace",
-	tokenRightBrace:   "rightBrace",
-	tokenLeftBracket:  "leftBracket",
-	tokenRightBracket: "rightBracket",
-	tokenLeftParen:    "leftParen",
-	tokenRightParen:   "rightParen",
-	tokenComma:        "comma",
-	tokenColon:        "colon",
-	tokenPlus:         "plus",
-	tokenEqual:        "equal",
-	tokenCompare:      "compare",
-	tokenFSCheck:      "fsCheck",
-	tokenAND:          "and",
-	tokenOR:           "or",
-	// Values
-	tokenBool:     "bool",
-	tokenInteger:  "integer",
-	tokenString:   "string",
-	tokenDuration: "duration",
-	tokenList:     "list",
-	tokenDict:     "dict",
-	tokenVariable: "variable",
-}
-
-var ( // solo tokens
-	soloKinds = [256]int16{ // keep sync with soloTexts
-		'{': tokenLeftBrace,
-		'}': tokenRightBrace,
-		'[': tokenLeftBracket,
-		']': tokenRightBracket,
-		'(': tokenLeftParen,
-		')': tokenRightParen,
-		',': tokenComma,
-		':': tokenColon,
-		'+': tokenPlus,
-	}
-	soloTexts = [...]string{ // keep sync with soloKinds
-		'{': "{",
-		'}': "}",
-		'[': "[",
-		']': "]",
-		'(': "(",
-		')': ")",
-		',': ",",
-		':': ":",
-		'+': "+",
-	}
-)
-
-// token is a token in config file.
-type token struct { // 40 bytes
-	kind int16  // tokenXXX
-	info int16  // compXXX for components, or code for variables
-	line int32  // at line number
-	file string // file path
-	text string // text literal
-}
-
-func (t token) name() string { return tokenNames[t.kind] }
-
 // lexer scans tokens in config file.
 type lexer struct {
 	index int
@@ -1225,3 +1129,99 @@ func (l *lexer) _loadURL(base string, file string) string {
 		return data
 	}
 }
+
+const ( // list of tokens. if you change this list, change tokenNames too.
+	// Components
+	tokenComponent = 1 + iota // stage, webapp, ...
+	// Properties
+	tokenProperty // .listen, .maxSize, ...
+	// Operators
+	tokenLeftBrace    // {
+	tokenRightBrace   // }
+	tokenLeftBracket  // [
+	tokenRightBracket // ]
+	tokenLeftParen    // (
+	tokenRightParen   // )
+	tokenComma        // ,
+	tokenColon        // :
+	tokenPlus         // +
+	tokenEqual        // =
+	tokenCompare      // ==, ^=, $=, *=, ~=, !=, !^, !$, !*, !~
+	tokenFSCheck      // -f, -d, -e, -D, -E, !f, !d, !e
+	tokenAND          // &&
+	tokenOR           // ||
+	// Values
+	tokenBool     // true, false
+	tokenInteger  // 123, 16K, 256M, ...
+	tokenString   // "", "abc", `def`, ...
+	tokenDuration // 1s, 2m, 3h, 4d, ...
+	tokenList     // lists: (...)
+	tokenDict     // dicts: [...]
+	tokenVariable // $method, $path, ...
+)
+
+var tokenNames = [...]string{ // token names. if you change this list, change token list too.
+	// Components
+	tokenComponent: "component",
+	// Properties
+	tokenProperty: "property",
+	// Operators
+	tokenLeftBrace:    "leftBrace",
+	tokenRightBrace:   "rightBrace",
+	tokenLeftBracket:  "leftBracket",
+	tokenRightBracket: "rightBracket",
+	tokenLeftParen:    "leftParen",
+	tokenRightParen:   "rightParen",
+	tokenComma:        "comma",
+	tokenColon:        "colon",
+	tokenPlus:         "plus",
+	tokenEqual:        "equal",
+	tokenCompare:      "compare",
+	tokenFSCheck:      "fsCheck",
+	tokenAND:          "and",
+	tokenOR:           "or",
+	// Values
+	tokenBool:     "bool",
+	tokenInteger:  "integer",
+	tokenString:   "string",
+	tokenDuration: "duration",
+	tokenList:     "list",
+	tokenDict:     "dict",
+	tokenVariable: "variable",
+}
+
+var ( // solo tokens
+	soloKinds = [256]int16{ // keep sync with soloTexts
+		'{': tokenLeftBrace,
+		'}': tokenRightBrace,
+		'[': tokenLeftBracket,
+		']': tokenRightBracket,
+		'(': tokenLeftParen,
+		')': tokenRightParen,
+		',': tokenComma,
+		':': tokenColon,
+		'+': tokenPlus,
+	}
+	soloTexts = [...]string{ // keep sync with soloKinds
+		'{': "{",
+		'}': "}",
+		'[': "[",
+		']': "]",
+		'(': "(",
+		')': ")",
+		',': ",",
+		':': ":",
+		'+': "+",
+	}
+)
+
+// token is a token in config file.
+type token struct { // 40 bytes
+	kind int16  // tokenXXX
+	info int16  // compXXX for components, or code for variables
+	line int32  // at line number
+	file string // file path
+	text string // text literal
+}
+
+func (t token) name() string { return tokenNames[t.kind] }

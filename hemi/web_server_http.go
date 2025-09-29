@@ -372,7 +372,7 @@ type ServerRequest interface { // for *server[1-3]Request
 	RiskyMake(size int) []byte
 
 	// Internal only
-	getPathInfo() os.FileInfo
+	absPathInfo() os.FileInfo
 	riskyAbsPath() []byte
 	makeAbsPath()
 	contentIsForm() bool
@@ -670,7 +670,6 @@ func (r *serverRequest_) cleanPath() {
 		r.path = r.path[:pReal]
 	}
 }
-func (r *serverRequest_) riskyAbsPath() []byte { return r.absPath }
 func (r *serverRequest_) makeAbsPath() {
 	if r.webapp.webRoot == "" { // if webapp's webRoot is empty, r.absPath is not used either. so it's safe to do nothing
 		return
@@ -680,7 +679,8 @@ func (r *serverRequest_) makeAbsPath() {
 	n := copy(r.absPath, webRoot)
 	copy(r.absPath[n:], r.RiskyPath())
 }
-func (r *serverRequest_) getPathInfo() os.FileInfo {
+func (r *serverRequest_) riskyAbsPath() []byte { return r.absPath }
+func (r *serverRequest_) absPathInfo() os.FileInfo {
 	if !r.pathInfoGot {
 		r.pathInfoGot = true
 		if pathInfo, err := os.Stat(string(r.absPath)); err == nil {

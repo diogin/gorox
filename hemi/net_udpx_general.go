@@ -15,6 +15,7 @@ import (
 
 // udpxHolder is the interface for _udpxHolder_.
 type udpxHolder interface {
+	// TODO
 }
 
 // _udpxHolder_ is a mixin.
@@ -30,6 +31,7 @@ func (h *_udpxHolder_) onPrepare(comp Component) {
 
 // udpxConn collects shared methods between *UDPXConn and *UConn.
 type udpxConn interface {
+	// TODO
 }
 
 // udpxConn_ is a parent.

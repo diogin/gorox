@@ -20,8 +20,11 @@ func (h *_hrpcHolder_) onPrepare(comp Component) {
 
 // hrpcConn_ is a parent.
 type hrpcConn_ struct { // for hrpcConn and hConn
+	// TODO
 }
 
 // hrpcCall_ is a parent.
 type hrpcCall_ struct { // for hrpcCall and hCall
+	// request
+	// response
 }

@@ -185,6 +185,6 @@ func (c *hrpcConn) MakeTempName(dst []byte, unixTime int64) int {
 
 // hrpcCall
 type hrpcCall struct {
-	// request
-	// response
+	// Parent
+	// States
 }
