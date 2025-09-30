@@ -87,6 +87,7 @@ func (n *httpNode_[B]) onPrepare() {
 
 // backendConn is the backend-side http connection.
 type backendConn interface { // for *backend[1-3]Conn
+	// TODO
 }
 
 // _backendConn_ is a mixin.

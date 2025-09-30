@@ -16,11 +16,6 @@ func init() {
 		h.onCreate(compName, stage, webapp)
 		return h
 	})
-	RegisterSocklet("sockProxy", func(compName string, stage *Stage, webapp *Webapp) Socklet {
-		s := new(sockProxy)
-		s.onCreate(compName, stage, webapp)
-		return s
-	})
 }
 
 // httpProxy handlet passes http requests to http backends and caches responses.
@@ -279,6 +274,14 @@ func HTTPReverseProxy(servReq ServerRequest, servResp ServerResponse, hcache Hca
 		backStream.markBroken()
 		return
 	}
+}
+
+func init() {
+	RegisterSocklet("sockProxy", func(compName string, stage *Stage, webapp *Webapp) Socklet {
+		s := new(sockProxy)
+		s.onCreate(compName, stage, webapp)
+		return s
+	})
 }
 
 // sockProxy socklet passes webSockets to http backends.

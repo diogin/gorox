@@ -189,6 +189,7 @@ func (g *httpGate_[S]) ReachLimit(concurrentConns int32) bool {
 
 // serverConn is the server-side http connection.
 type serverConn interface { // for *server[1-3]Conn
+	// TODO
 }
 
 // _serverConn_ is a mixin.
@@ -212,6 +213,7 @@ func (c *_serverConn_[G]) Holder() httpHolder { return c.gate }
 
 // serverStream is the server-side http stream.
 type serverStream interface { // for *server[1-3]Stream
+	// TODO
 }
 
 // _serverStream_ is a mixin.
