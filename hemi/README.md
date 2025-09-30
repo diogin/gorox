@@ -42,8 +42,7 @@ The following sub directories are some programs that use the Hemi Engine:
 
 And something useful:
 
-  * example/  - Place example programs showing how to use the Hemi Engine,
-  * toolkit/  - Place auxiliary commands and tools that are sometimes useful.
+  * example/  - Place example programs showing how to use the Hemi Engine.
 
 
 Architecture
