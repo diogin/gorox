@@ -67,16 +67,11 @@ type fcgiNode struct {
 	// Mixins
 	_contentSaver_ // so fcgi responses can save their large contents in local file system.
 	// States
-	keepConn                    bool          // instructs FCGI server to keep conn?
-	idleTimeout                 time.Duration // conn idle timeout
-	keepAliveConns              int32         // max conns to keep alive. requires keepConn to be true
-	maxCumulativeExchansPerConn int32         // max exchans of one conn. 0 means infinite
-	connPool                    struct {      // free list of conns in this node
-		sync.Mutex
-		head *fcgiConn
-		tail *fcgiConn
-		qnty int // size of the list
-	}
+	keepConn                    bool                // instructs FCGI server to keep conn?
+	idleTimeout                 time.Duration       // conn idle timeout
+	keepAliveConns              int32               // max conns to keep alive. requires keepConn to be true
+	maxCumulativeExchansPerConn int32               // max exchans of one conn. 0 means infinite
+	backConns                   connPool[*fcgiConn] // free list of conns in this node
 }
 
 func (n *fcgiNode) onCreate(compName string, stage *Stage, backend *FCGIBackend) {
@@ -232,57 +227,9 @@ func (n *fcgiNode) storeExchan(exchan *fcgiExchan) {
 	}
 }
 
-func (n *fcgiNode) pullConn() *fcgiConn {
-	list := &n.connPool
-
-	list.Lock()
-	defer list.Unlock()
-
-	if list.qnty == 0 {
-		return nil
-	}
-	conn := list.head
-	list.head = conn.next
-	conn.next = nil
-	list.qnty--
-
-	return conn
-}
-func (n *fcgiNode) pushConn(conn *fcgiConn) {
-	list := &n.connPool
-
-	list.Lock()
-	defer list.Unlock()
-
-	if list.qnty == 0 {
-		list.head = conn
-		list.tail = conn
-	} else { // >= 1
-		list.tail.next = conn
-		list.tail = conn
-	}
-	list.qnty++
-}
-func (n *fcgiNode) closeIdle() int {
-	list := &n.connPool
-
-	list.Lock()
-	defer list.Unlock()
-
-	conn := list.head
-	for conn != nil {
-		next := conn.next
-		conn.next = nil
-		conn.Close()
-		conn = next
-	}
-	qnty := list.qnty
-	list.qnty = 0
-	list.head = nil
-	list.tail = nil
-
-	return qnty
-}
+func (n *fcgiNode) pullConn() *fcgiConn     { return n.backConns.pullConn() }
+func (n *fcgiNode) pushConn(conn *fcgiConn) { n.backConns.pushConn(conn) }
+func (n *fcgiNode) closeIdle() int          { return n.backConns.closeIdle() }
 
 // fcgiConn is a connection to an FCGI node.
 type fcgiConn struct {

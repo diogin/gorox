@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
 	"regexp"
 	"sync"
 )
@@ -291,55 +292,78 @@ func (r *Region) Free() {
 	}
 }
 
-// poolConn
-type poolConn struct {
-	next *poolConn
+// poolElem
+type poolElem[C io.Closer] struct {
+	next *poolElem[C]
+	conn C
+}
+
+var poolElems sync.Pool
+
+func getPoolElem[C io.Closer]() *poolElem[C] {
+	var elem *poolElem[C]
+	if x := poolElems.Get(); x == nil {
+		elem = new(poolElem[C])
+	} else {
+		elem = x.(*poolElem[C])
+	}
+	return elem
+}
+func putPoolElem[C io.Closer](elem *poolElem[C]) {
+	var null C
+	elem.conn = null
+	poolElems.Put(elem)
 }
 
 // connPool
-type connPool struct {
+type connPool[C io.Closer] struct {
 	sync.Mutex
-	head *poolConn
-	tail *poolConn
+	head *poolElem[C]
+	tail *poolElem[C]
 	qnty int
 }
 
-func (p *connPool) pullConn() *poolConn {
+func (p *connPool[C]) pullConn() C {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.qnty == 0 {
-		return nil
+	var conn C
+	if p.qnty > 0 {
+		elem := p.head
+		p.head = elem.next
+		elem.next = nil
+		conn = elem.conn
+		putPoolElem(elem)
+		p.qnty--
 	}
-	conn := p.head
-	p.head = conn.next
-	conn.next = nil
-	p.qnty--
 	return conn
 }
-func (p *connPool) pushConn(conn *poolConn) {
+func (p *connPool[C]) pushConn(conn C) {
 	p.Lock()
 	defer p.Unlock()
+
+	elem := getPoolElem[C]()
+	elem.conn = conn
 
 	if p.qnty == 0 {
-		p.head = conn
-		p.tail = conn
+		p.head = elem
 	} else {
-		p.tail.next = conn
-		p.tail = conn
+		p.tail.next = elem
 	}
+	p.tail = elem
 	p.qnty++
 }
-func (p *connPool) closeIdle(closeFunc func(conn *poolConn) error) int {
+func (p *connPool[C]) closeIdle() int {
 	p.Lock()
 	defer p.Unlock()
 
-	conn := p.head
-	for conn != nil {
-		next := conn.next
-		conn.next = nil
-		closeFunc(conn)
-		conn = next
+	elem := p.head
+	for elem != nil {
+		next := elem.next
+		elem.next = nil
+		elem.conn.Close()
+		putPoolElem(elem)
+		elem = next
 	}
 	qnty := p.qnty
 	p.qnty = 0

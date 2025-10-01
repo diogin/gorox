@@ -52,12 +52,7 @@ type http1Node struct {
 	// Parent
 	httpNode_[*HTTP1Backend]
 	// States
-	connPool struct {
-		sync.Mutex
-		head *backend1Conn
-		tail *backend1Conn
-		qnty int
-	}
+	backConns connPool[*backend1Conn]
 }
 
 func (n *http1Node) onCreate(compName string, stage *Stage, backend *HTTP1Backend) {
@@ -196,57 +191,9 @@ func (n *http1Node) storeStream(backStream *backend1Stream) {
 	}
 }
 
-func (n *http1Node) pullConn() *backend1Conn {
-	list := &n.connPool
-
-	list.Lock()
-	defer list.Unlock()
-
-	if list.qnty == 0 {
-		return nil
-	}
-	conn := list.head
-	list.head = conn.next
-	conn.next = nil
-	list.qnty--
-
-	return conn
-}
-func (n *http1Node) pushConn(conn *backend1Conn) {
-	list := &n.connPool
-
-	list.Lock()
-	defer list.Unlock()
-
-	if list.qnty == 0 {
-		list.head = conn
-		list.tail = conn
-	} else { // >= 1
-		list.tail.next = conn
-		list.tail = conn
-	}
-	list.qnty++
-}
-func (n *http1Node) closeIdle() int {
-	list := &n.connPool
-
-	list.Lock()
-	defer list.Unlock()
-
-	conn := list.head
-	for conn != nil {
-		next := conn.next
-		conn.next = nil
-		conn.Close()
-		conn = next
-	}
-	qnty := list.qnty
-	list.qnty = 0
-	list.head = nil
-	list.tail = nil
-
-	return qnty
-}
+func (n *http1Node) pullConn() *backend1Conn     { return n.backConns.pullConn() }
+func (n *http1Node) pushConn(conn *backend1Conn) { n.backConns.pushConn(conn) }
+func (n *http1Node) closeIdle() int              { return n.backConns.closeIdle() }
 
 // backend1Conn is the backend-side HTTP/1.x connection.
 type backend1Conn struct {

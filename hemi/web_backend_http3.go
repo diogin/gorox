@@ -48,12 +48,7 @@ type http3Node struct {
 	// Parent
 	httpNode_[*HTTP3Backend]
 	// States
-	connPool struct {
-		sync.Mutex
-		head *backend3Conn
-		tail *backend3Conn
-		qnty int
-	}
+	backConns connPool[*backend3Conn]
 }
 
 func (n *http3Node) onCreate(compName string, stage *Stage, backend *HTTP3Backend) {

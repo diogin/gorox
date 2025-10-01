@@ -48,12 +48,7 @@ type http2Node struct {
 	// Parent
 	httpNode_[*HTTP2Backend]
 	// States
-	connPool struct {
-		sync.Mutex
-		head *backend2Conn
-		tail *backend2Conn
-		qnty int
-	}
+	backConns connPool[*backend2Conn]
 }
 
 func (n *http2Node) onCreate(compName string, stage *Stage, backend *HTTP2Backend) {
