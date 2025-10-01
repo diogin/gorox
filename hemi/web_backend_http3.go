@@ -112,7 +112,7 @@ func (n *http3Node) closeIdle() int {
 // backend3Conn is the backend-side HTTP/3 connection.
 type backend3Conn struct {
 	// Parent
-	http3Conn_
+	http3Conn_[*backend3Stream]
 	// Mixins
 	_backendConn_[*http3Node]
 	// Assocs

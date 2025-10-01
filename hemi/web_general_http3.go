@@ -24,13 +24,13 @@ type http3Conn interface {
 }
 
 // http3Conn_ is a parent.
-type http3Conn_ struct { // for backend3Conn and server3Conn
+type http3Conn_[S http3Stream] struct { // for backend3Conn and server3Conn
 	// Parent
 	httpConn_
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	quicConn    *gotcp2.Conn // the quic connection
+	quicConn    *gotcp2.Conn // the underlying quic connection
 	inBuffer    *http3Buffer // ...
 	decodeTable qpackTable   // ...
 	encodeTable qpackTable   // ...
@@ -43,7 +43,7 @@ type _http3Conn0 struct { // for fast reset, entirely
 	sectFore     uint32 // incoming frame section (header or payload) ends at c.inBuffer.buf[c.sectFore]
 }
 
-func (c *http3Conn_) onGet(id int64, holder holder, quicConn *gotcp2.Conn) {
+func (c *http3Conn_[S]) onGet(id int64, holder holder, quicConn *gotcp2.Conn) {
 	c.httpConn_.onGet(id, holder)
 
 	c.quicConn = quicConn
@@ -52,7 +52,7 @@ func (c *http3Conn_) onGet(id int64, holder holder, quicConn *gotcp2.Conn) {
 		c.inBuffer.incRef()
 	}
 }
-func (c *http3Conn_) onPut() {
+func (c *http3Conn_[S]) onPut() {
 	// c.inBuffer is reserved
 	// c.decodeTable is reserved
 	// c.encodeTable is reserved
@@ -61,7 +61,7 @@ func (c *http3Conn_) onPut() {
 	c.httpConn_.onPut()
 }
 
-func (c *http3Conn_) remoteAddr() net.Addr { return nil } // TODO
+func (c *http3Conn_[S]) remoteAddr() net.Addr { return nil } // TODO
 
 // http3Stream
 type http3Stream interface {
@@ -77,7 +77,7 @@ type http3Stream_[C http3Conn] struct { // for backend3Stream and server3Stream
 	// Stream states (stocks)
 	// Stream states (controlled)
 	// Stream states (non-zeros)
-	quicStream *gotcp2.Stream // the quic stream
+	quicStream *gotcp2.Stream // the underlying quic stream
 	// Stream states (zeros)
 	_http3Stream0 // all values in this struct must be zero by default!
 }

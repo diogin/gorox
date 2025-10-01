@@ -129,7 +129,7 @@ func (g *http3Gate) justClose(quicConn *gotcp2.Conn) {
 // server3Conn is the server-side HTTP/3 connection.
 type server3Conn struct {
 	// Parent
-	http3Conn_
+	http3Conn_[*server3Stream]
 	// Mixins
 	_serverConn_[*http3Gate]
 	// Conn states (stocks)
