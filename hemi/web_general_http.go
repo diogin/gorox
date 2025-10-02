@@ -133,7 +133,7 @@ type httpStream interface { // for *http[1-3]Stream
 	read(dst []byte) (int, error)
 	readFull(dst []byte) (int, error)
 	write(src []byte) (int, error)
-	writev(srcVec *net.Buffers) (int64, error)
+	writeVec(srcVec *net.Buffers) (int64, error)
 }
 
 // httpStream_ is a parent.
@@ -1643,7 +1643,7 @@ type _httpOut_ struct { // for backendRequest_ and serverResponse_. outgoing mes
 	sendTime      time.Time   // the time when first write operation is performed
 	contentRanges []Range     // if outgoing content is ranged, this will be set
 	rangeType     string      // if outgoing content is ranged, this will be the content type for each range
-	vector        net.Buffers // for writev. to overcome the limitation of Go's escape analysis. set when used, reset after stream
+	vector        net.Buffers // for writeVec. to overcome the limitation of Go's escape analysis. set when used, reset after stream
 	fixedVector   [4][]byte   // for sending/echoing message. reset after stream
 	_httpOut0                 // all values in this struct must be zero by default!
 }

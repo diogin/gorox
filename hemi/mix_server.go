@@ -131,7 +131,7 @@ type Gate interface {
 // Gate_ is a parent.
 type Gate_[S Server] struct { // for all gates
 	// Mixins
-	_holder_
+	_holder_ // hold conns
 	// Assocs
 	server S
 	// States

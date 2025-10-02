@@ -234,8 +234,8 @@ func (x *scgiExchan) read(dst []byte) (int, error) { return x.netConn.Read(dst) 
 func (x *scgiExchan) readAtLeast(dst []byte, min int) (int, error) {
 	return io.ReadAtLeast(x.netConn, dst, min)
 }
-func (x *scgiExchan) write(src []byte) (int, error)             { return x.netConn.Write(src) }
-func (x *scgiExchan) writev(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(x.netConn) }
+func (x *scgiExchan) write(src []byte) (int, error)               { return x.netConn.Write(src) }
+func (x *scgiExchan) writeVec(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(x.netConn) }
 
 func (x *scgiExchan) Close() error {
 	netConn := x.netConn
@@ -312,7 +312,7 @@ type scgiRequest struct { // outgoing. needs building
 	sendTimeout time.Duration // timeout to send the whole request. zero means no timeout
 	// Exchan states (zeros)
 	sendTime      time.Time   // the time when first write operation is performed
-	vector        net.Buffers // for writev. to overcome the limitation of Go's escape analysis. set when used, reset after exchan
+	vector        net.Buffers // for writeVec. to overcome the limitation of Go's escape analysis. set when used, reset after exchan
 	fixedVector   [7][]byte   // for sending request. reset after exchan. 120B
 	_scgiRequest0             // all values in this struct must be zero by default!
 }

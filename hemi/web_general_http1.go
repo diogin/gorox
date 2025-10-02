@@ -24,7 +24,7 @@ type http1Conn interface { // for *backend1Conn and *server1Conn
 	read(dst []byte) (int, error)
 	readFull(dst []byte) (int, error)
 	write(src []byte) (int, error)
-	writev(srcVec *net.Buffers) (int64, error)
+	writeVec(srcVec *net.Buffers) (int64, error)
 }
 
 // http1Conn_ is a parent.
@@ -86,13 +86,13 @@ func (c *http1Conn_) setWriteDeadline() error {
 	return nil
 }
 
-func (c *http1Conn_) read(dst []byte) (int, error)              { return c.netConn.Read(dst) }
-func (c *http1Conn_) readFull(dst []byte) (int, error)          { return io.ReadFull(c.netConn, dst) }
-func (c *http1Conn_) write(src []byte) (int, error)             { return c.netConn.Write(src) }
-func (c *http1Conn_) writev(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(c.netConn) }
+func (c *http1Conn_) read(dst []byte) (int, error)                { return c.netConn.Read(dst) }
+func (c *http1Conn_) readFull(dst []byte) (int, error)            { return io.ReadFull(c.netConn, dst) }
+func (c *http1Conn_) write(src []byte) (int, error)               { return c.netConn.Write(src) }
+func (c *http1Conn_) writeVec(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(c.netConn) }
 
 // http1Stream
-type http1Stream interface {
+type http1Stream interface { // for *backend1Stream and *server1Stream
 	// Imports
 	httpStream
 	// Methods
@@ -130,8 +130,8 @@ func (s *http1Stream_[C]) setWriteDeadline() error { return s.conn.setWriteDeadl
 func (s *http1Stream_[C]) read(dst []byte) (int, error)     { return s.conn.read(dst) }
 func (s *http1Stream_[C]) readFull(dst []byte) (int, error) { return s.conn.readFull(dst) }
 func (s *http1Stream_[C]) write(src []byte) (int, error)    { return s.conn.write(src) }
-func (s *http1Stream_[C]) writev(srcVec *net.Buffers) (int64, error) {
-	return s.conn.writev(srcVec)
+func (s *http1Stream_[C]) writeVec(srcVec *net.Buffers) (int64, error) {
+	return s.conn.writeVec(srcVec)
 }
 
 // _http1In_ is a mixin.
@@ -782,7 +782,7 @@ func (r *_http1Out_) _addFixedHeader(name []byte, value []byte) { // used by fin
 	r.outputEdge += 2
 }
 
-func (r *_http1Out_) sendChain() error { // TODO: if conn is TLS, don't use writev as it uses many Write() which might be slower than make+copy+write.
+func (r *_http1Out_) sendChain() error { // TODO: if conn is TLS, don't use writeVec as it uses many Write() which might be slower than make+copy+write.
 	return r._sendEntireChain()
 	// TODO
 	numRanges := len(r.contentRanges)
@@ -1032,7 +1032,7 @@ func (r *_http1Out_) _writeFilePiece(piece *Piece, inChunked bool) error {
 			r.vector[0] = sizeBuffer[:k]
 			r.vector[1] = buffer[:n]
 			r.vector[2] = bytesCRLF
-			_, err = r.stream.writev(&r.vector)
+			_, err = r.stream.writeVec(&r.vector)
 		} else { // HTTP/1.0, or identity content
 			_, err = r.stream.write(buffer[0:n])
 		}
@@ -1055,7 +1055,7 @@ func (r *_http1Out_) writeVector() error {
 		r.stream.markBroken()
 		return err
 	}
-	_, err := r.stream.writev(&r.vector)
+	_, err := r.stream.writeVec(&r.vector)
 	return r._longTimeCheck(err)
 }
 func (r *_http1Out_) writeBytes(data []byte) error {

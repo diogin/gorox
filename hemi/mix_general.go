@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// holder collects shared methods between Gate and Node.
-type holder interface {
+// holder
+type holder interface { // for _holder_
 	Stage() *Stage
 	Address() string
 	UDSMode() bool
@@ -130,7 +130,7 @@ func (l *_accessLogger_) Logf(f string, v ...any) { l.logger.Logf(f, v...) }
 func (l *_accessLogger_) CloseLog() { l.logger.Close() }
 
 // contentSaver
-type contentSaver interface {
+type contentSaver interface { // for _contentSaver_
 	RecvTimeout() time.Duration  // timeout to recv the whole message content. zero means no timeout
 	SendTimeout() time.Duration  // timeout to send the whole message. zero means no timeout
 	MaxContentSize() int64       // max content size allowed

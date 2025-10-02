@@ -340,8 +340,8 @@ func (c *fcgiConn) read(dst []byte) (int, error) { return c.netConn.Read(dst) }
 func (c *fcgiConn) readAtLeast(dst []byte, min int) (int, error) {
 	return io.ReadAtLeast(c.netConn, dst, min)
 }
-func (c *fcgiConn) write(src []byte) (int, error)             { return c.netConn.Write(src) }
-func (c *fcgiConn) writev(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(c.netConn) }
+func (c *fcgiConn) write(src []byte) (int, error)               { return c.netConn.Write(src) }
+func (c *fcgiConn) writeVec(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(c.netConn) }
 
 func (c *fcgiConn) Close() error {
 	netConn := c.netConn
@@ -393,8 +393,8 @@ func (x *fcgiExchan) read(dst []byte) (int, error) { return x.conn.read(dst) }
 func (x *fcgiExchan) readAtLeast(dst []byte, min int) (int, error) {
 	return x.conn.readAtLeast(dst, min)
 }
-func (x *fcgiExchan) write(src []byte) (int, error)             { return x.conn.write(src) }
-func (x *fcgiExchan) writev(srcVec *net.Buffers) (int64, error) { return x.conn.writev(srcVec) }
+func (x *fcgiExchan) write(src []byte) (int, error)               { return x.conn.write(src) }
+func (x *fcgiExchan) writeVec(srcVec *net.Buffers) (int64, error) { return x.conn.writeVec(srcVec) }
 
 // fcgiResponse is the FCGI response in an FCGI exchange. It must implements the BackendResponse interface.
 type fcgiResponse struct { // incoming. needs parsing
@@ -1129,7 +1129,7 @@ type fcgiRequest struct { // outgoing. needs building
 	sendTimeout time.Duration // timeout to send the whole request. zero means no timeout
 	// Exchan states (zeros)
 	sendTime      time.Time   // the time when first write operation is performed
-	vector        net.Buffers // for writev. to overcome the limitation of Go's escape analysis. set when used, reset after exchan
+	vector        net.Buffers // for writeVec. to overcome the limitation of Go's escape analysis. set when used, reset after exchan
 	fixedVector   [7][]byte   // for sending request. reset after exchan. 120B
 	_fcgiRequest0             // all values in this struct must be zero by default!
 }
@@ -1462,7 +1462,7 @@ func (r *fcgiRequest) _writeVector() error {
 		r.exchan.markBroken()
 		return err
 	}
-	_, err := r.exchan.writev(&r.vector)
+	_, err := r.exchan.writeVec(&r.vector)
 	return r._longTimeCheck(err)
 }
 func (r *fcgiRequest) _writeBytes(data []byte) error {

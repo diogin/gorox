@@ -355,7 +355,7 @@ func (s *server2Stream) execute() { // runner
 func (s *server2Stream) _serveAbnormal(req *server2Request, resp *server2Response) { // 4xx & 5xx
 	// TODO
 	// s.setWriteDeadline() // for _serveAbnormal
-	// s.writev()
+	// s.writeVec()
 }
 func (s *server2Stream) _writeContinue() bool { // 100 continue
 	// TODO

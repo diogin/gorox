@@ -575,7 +575,7 @@ func (s *server1Stream) _serveAbnormal(req *server1Request, resp *server1Respons
 	resp.vector[2] = resp.fixedHeaders()
 	if s.setWriteDeadline() == nil { // for _serveAbnormal
 		// Ignore any error, as the connection will be closed anyway.
-		s.writev(&resp.vector)
+		s.writeVec(&resp.vector)
 	}
 }
 func (s *server1Stream) _writeContinue() bool { // 100 continue

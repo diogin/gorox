@@ -141,7 +141,7 @@ type Node_[B Backend] struct { // for all backend nodes
 	// Parent
 	Component_
 	// Mixins
-	_holder_
+	_holder_ // hold conns
 	// Assocs
 	backend B // the containing backend
 	// States

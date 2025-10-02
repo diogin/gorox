@@ -18,7 +18,7 @@ import (
 )
 
 // http3Conn
-type http3Conn interface {
+type http3Conn interface { // for *backend3Conn and *server3Conn
 	// Imports
 	httpConn
 	// Methods
@@ -65,7 +65,7 @@ func (c *http3Conn_[S]) onPut() {
 func (c *http3Conn_[S]) remoteAddr() net.Addr { return nil } // TODO
 
 // http3Stream
-type http3Stream interface {
+type http3Stream interface { // for *backend3Stream and *server3Stream
 	// Imports
 	httpStream
 	// Methods
@@ -114,7 +114,7 @@ func (s *http3Stream_[C]) setWriteDeadline() error {
 func (s *http3Stream_[C]) read(dst []byte) (int, error)     { return s.quicStream.Read(dst) }
 func (s *http3Stream_[C]) readFull(dst []byte) (int, error) { return io.ReadFull(s.quicStream, dst) }
 func (s *http3Stream_[C]) write(src []byte) (int, error)    { return s.quicStream.Write(src) }
-func (s *http3Stream_[C]) writev(srcVec *net.Buffers) (int64, error) {
+func (s *http3Stream_[C]) writeVec(srcVec *net.Buffers) (int64, error) {
 	return srcVec.WriteTo(s.quicStream)
 }
 
@@ -252,13 +252,13 @@ func (r *_http3Out_) _writeTextPiece(piece *Piece) error {
 func (r *_http3Out_) _writeFilePiece(piece *Piece) error {
 	// TODO
 	// r.stream.setWriteDeadline() // for _writeFilePiece
-	// r.stream.write() or r.stream.writev()
+	// r.stream.write() or r.stream.writeVec()
 	return nil
 }
 func (r *_http3Out_) writeVector() error {
 	// TODO
 	// r.stream.setWriteDeadline() // for writeVector
-	// r.stream.writev()
+	// r.stream.writeVec()
 	return nil
 }
 func (r *_http3Out_) writeBytes(data []byte) error {

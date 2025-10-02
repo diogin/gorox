@@ -20,7 +20,7 @@ import (
 )
 
 // http2Conn
-type http2Conn interface {
+type http2Conn interface { // for *backend2Conn and *server2Conn
 	// Imports
 	httpConn
 	// Methods
@@ -55,8 +55,8 @@ type http2Conn_[S http2Stream] struct { // for backend2Conn and server2Conn
 	inFrame0         http2InFrame                 // incoming frame 0
 	inFrame1         http2InFrame                 // incoming frame 1
 	inFrame          *http2InFrame                // current incoming frame. refers to inFrame0 or inFrame1 in turn
-	vector           net.Buffers                  // used by writev in c.manage()
-	fixedVector      [64][]byte                   // 1.5 KiB. used by writev in c.manage()
+	vector           net.Buffers                  // used by writeVec in c.manage()
+	fixedVector      [64][]byte                   // 1.5 KiB. used by writeVec in c.manage()
 	_http2Conn0                                   // all values in this struct must be zero by default!
 }
 type _http2Conn0 struct { // for fast reset, entirely
@@ -547,7 +547,7 @@ func (c *http2Conn_[S]) sendOutFrame(outFrame *http2OutFrame[S]) error {
 	if err := c.setWriteDeadline(); err != nil {
 		return err
 	}
-	n, err := c.writev(&c.vector)
+	n, err := c.writeVec(&c.vector)
 	if DebugLevel() >= 2 {
 		Printf("--------------------- conn=%d CALL WRITE=%d -----------------------\n", c.id, n)
 		Printf("conn=%d ---> %+v\n", c.id, outFrame)
@@ -585,12 +585,12 @@ func (c *http2Conn_[S]) readAtLeast(dst []byte, min int) (int, error) {
 	return io.ReadAtLeast(c.netConn, dst, min)
 }
 func (c *http2Conn_[S]) write(src []byte) (int, error) { return c.netConn.Write(src) }
-func (c *http2Conn_[S]) writev(srcVec *net.Buffers) (int64, error) {
+func (c *http2Conn_[S]) writeVec(srcVec *net.Buffers) (int64, error) {
 	return srcVec.WriteTo(c.netConn)
 }
 
 // http2Stream
-type http2Stream interface {
+type http2Stream interface { // for *backend2Stream and *server2Stream
 	// Imports
 	httpStream
 	// Methods
@@ -658,7 +658,7 @@ func (s *http2Stream_[C]) write(src []byte) (int, error) {
 	// TODO
 	return 0, nil
 }
-func (s *http2Stream_[C]) writev(srcVec *net.Buffers) (int64, error) {
+func (s *http2Stream_[C]) writeVec(srcVec *net.Buffers) (int64, error) {
 	// TODO
 	return 0, nil
 }
@@ -808,13 +808,13 @@ func (r *_http2Out_) _writeTextPiece(piece *Piece) error {
 func (r *_http2Out_) _writeFilePiece(piece *Piece) error {
 	// TODO
 	// r.stream.setWriteDeadline() // for _writeFilePiece
-	// r.stream.write() or r.stream.writev()
+	// r.stream.write() or r.stream.writeVec()
 	return nil
 }
 func (r *_http2Out_) writeVector() error {
 	// TODO
 	// r.stream.setWriteDeadline() // for writeVector
-	// r.stream.writev()
+	// r.stream.writeVec()
 	return nil
 }
 func (r *_http2Out_) writeBytes(data []byte) error {
