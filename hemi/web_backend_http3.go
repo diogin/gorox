@@ -48,7 +48,7 @@ type http3Node struct {
 	// Parent
 	httpNode_[*HTTP3Backend]
 	// States
-	backConns connPool[*backend3Conn]
+	backConns connPool[*backend3Conn] // free list of conns in this node
 }
 
 func (n *http3Node) onCreate(compName string, stage *Stage, backend *HTTP3Backend) {
@@ -92,17 +92,9 @@ func (n *http3Node) storeStream(backStream *backend3Stream) {
 	// TODO
 }
 
-func (n *http3Node) pullConn() *backend3Conn {
-	// TODO
-	return nil
-}
-func (n *http3Node) pushConn(conn *backend3Conn) {
-	// TODO
-}
-func (n *http3Node) closeIdle() int {
-	// TODO
-	return 0
-}
+func (n *http3Node) pullConn() *backend3Conn     { return n.backConns.pullConn() }
+func (n *http3Node) pushConn(conn *backend3Conn) { n.backConns.pushConn(conn) }
+func (n *http3Node) closeIdle() int              { return n.backConns.closeIdle() }
 
 // backend3Conn is the backend-side HTTP/3 connection.
 type backend3Conn struct {

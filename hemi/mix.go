@@ -310,7 +310,8 @@ func getPoolElem[C io.Closer]() *poolElem[C] {
 	return elem
 }
 func putPoolElem[C io.Closer](elem *poolElem[C]) {
-	var null C
+	elem.next = nil
+	var null C // nil
 	elem.conn = null
 	poolElems.Put(elem)
 }
@@ -331,7 +332,6 @@ func (p *connPool[C]) pullConn() C {
 	if p.qnty > 0 {
 		elem := p.head
 		p.head = elem.next
-		elem.next = nil
 		conn = elem.conn
 		putPoolElem(elem)
 		p.qnty--
@@ -343,6 +343,7 @@ func (p *connPool[C]) pushConn(conn C) {
 	defer p.Unlock()
 
 	elem := getPoolElem[C]()
+	elem.next = nil
 	elem.conn = conn
 
 	if p.qnty == 0 {
@@ -353,6 +354,7 @@ func (p *connPool[C]) pushConn(conn C) {
 	p.tail = elem
 	p.qnty++
 }
+
 func (p *connPool[C]) closeIdle() int {
 	p.Lock()
 	defer p.Unlock()
@@ -360,7 +362,6 @@ func (p *connPool[C]) closeIdle() int {
 	elem := p.head
 	for elem != nil {
 		next := elem.next
-		elem.next = nil
 		elem.conn.Close()
 		putPoolElem(elem)
 		elem = next

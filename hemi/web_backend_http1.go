@@ -52,7 +52,7 @@ type http1Node struct {
 	// Parent
 	httpNode_[*HTTP1Backend]
 	// States
-	backConns connPool[*backend1Conn]
+	backConns connPool[*backend1Conn] // free list of conns in this node
 }
 
 func (n *http1Node) onCreate(compName string, stage *Stage, backend *HTTP1Backend) {
