@@ -366,7 +366,7 @@ type Rule struct {
 	revisers []Reviser // revisers in this rule. NOTICE: revisers are sub components of webapp, not rule
 	socklets []Socklet // socklets in this rule. NOTICE: socklets are sub components of webapp, not rule
 	// States
-	general    bool     // general match?
+	generic    bool     // generic match?
 	logAccess  bool     // enable logging for this rule?
 	returnCode int16    // ...
 	returnText []byte   // ...
@@ -386,7 +386,7 @@ func (r *Rule) OnShutdown() { r.webapp.DecRule() }
 
 func (r *Rule) OnConfigure() {
 	if r.info == nil {
-		r.general = true
+		r.generic = true
 	} else {
 		cond := r.info.(ruleCond)
 		r.varCode = cond.varCode
@@ -497,7 +497,7 @@ func (r *Rule) addReviser(reviser Reviser) { r.revisers = append(r.revisers, rev
 func (r *Rule) addSocklet(socklet Socklet) { r.socklets = append(r.socklets, socklet) }
 
 func (r *Rule) isMatch(req ServerRequest) bool {
-	if r.general {
+	if r.generic {
 		return true
 	}
 	varValue := req.riskyVariable(r.varCode, r.varName)

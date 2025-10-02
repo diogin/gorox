@@ -1,4 +1,4 @@
-GoTCP2 is our QUIC Implementation. See RFC 8999, RFC 9000, RFC 9001, and RFC 9002.
+gotcp2 is a QUIC Implementation in Go. See RFC 8999, RFC 9000, RFC 9001, and RFC 9002.
 
 import:
 	net
