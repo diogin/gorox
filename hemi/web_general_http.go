@@ -89,8 +89,6 @@ type httpConn_ struct { // for http[1-3]Conn_
 	cumulativeStreams atomic.Int32 // cumulative num of streams served or fired by this conn
 	broken            atomic.Bool  // is conn broken?
 	counter           atomic.Int64 // can be used to generate a random number
-	lastWrite         time.Time    // deadline of last write operation
-	lastRead          time.Time    // deadline of last read operation
 }
 
 func (c *httpConn_) onGet(id int64, holder holder) {
@@ -106,8 +104,6 @@ func (c *httpConn_) onPut() {
 	c.cumulativeStreams.Store(0)
 	c.broken.Store(false)
 	c.counter.Store(0)
-	c.lastWrite = time.Time{}
-	c.lastRead = time.Time{}
 }
 
 func (c *httpConn_) ID() int64     { return c.id }
@@ -128,10 +124,10 @@ type httpStream interface { // for *http[1-3]Stream
 	TLSMode() bool
 	MakeTempName(dst []byte, unixTime int64) int
 	remoteAddr() net.Addr
+	markBroken()    // mark stream as broken
+	isBroken() bool // returns true if either side of the stream is broken
 	buffer256() []byte
 	riskyMake(size int) []byte
-	isBroken() bool // returns true if either side of the stream is broken
-	markBroken()    // mark stream as broken
 	setReadDeadline() error
 	setWriteDeadline() error
 	read(dst []byte) (int, error)
@@ -281,10 +277,10 @@ func (r *_httpIn_) onUse(httpVersion uint8, asResponse bool) { // for non-zeros
 	r.array = r.stockArray[:]
 	r.primes = r.stockPrimes[0:1:cap(r.stockPrimes)] // use append(). r.primes[0] is skipped due to zero value of pair indexes.
 	r.extras = r.stockExtras[0:0:cap(r.stockExtras)] // use append()
-	httpHolder := r.stream.Holder()
-	r.recvTimeout = httpHolder.RecvTimeout()
-	r.maxContentSize = httpHolder.MaxContentSize()
-	r.maxMemoryContentSize = httpHolder.MaxMemoryContentSize()
+	holder := r.stream.Holder()
+	r.recvTimeout = holder.RecvTimeout()
+	r.maxContentSize = holder.MaxContentSize()
+	r.maxMemoryContentSize = holder.MaxMemoryContentSize()
 	r.contentSize = -1 // no content
 	r.httpVersion = httpVersion
 	r.asResponse = asResponse
@@ -1664,8 +1660,8 @@ type _httpOut0 struct { // for fast reset, entirely
 
 func (r *_httpOut_) onUse(httpVersion uint8, asRequest bool) { // for non-zeros
 	r.output = r.stockOutput[:]
-	httpHolder := r.stream.Holder()
-	r.sendTimeout = httpHolder.SendTimeout()
+	holder := r.stream.Holder()
+	r.sendTimeout = holder.SendTimeout()
 	r.contentSize = -1 // not set
 	r.httpVersion = httpVersion
 	r.asRequest = asRequest

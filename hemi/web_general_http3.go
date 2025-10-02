@@ -9,6 +9,7 @@
 package hemi
 
 import (
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -110,21 +111,11 @@ func (s *http3Stream_[C]) setWriteDeadline() error {
 	return nil
 }
 
-func (s *http3Stream_[C]) read(dst []byte) (int, error) {
-	// TODO
-	return 0, nil
-}
-func (s *http3Stream_[C]) readFull(dst []byte) (int, error) {
-	// TODO
-	return 0, nil
-}
-func (s *http3Stream_[C]) write(src []byte) (int, error) {
-	// TODO
-	return 0, nil
-}
+func (s *http3Stream_[C]) read(dst []byte) (int, error)     { return s.quicStream.Read(dst) }
+func (s *http3Stream_[C]) readFull(dst []byte) (int, error) { return io.ReadFull(s.quicStream, dst) }
+func (s *http3Stream_[C]) write(src []byte) (int, error)    { return s.quicStream.Write(src) }
 func (s *http3Stream_[C]) writev(srcVec *net.Buffers) (int64, error) {
-	// TODO
-	return 0, nil
+	return srcVec.WriteTo(s.quicStream)
 }
 
 // _http3In_ is a mixin.

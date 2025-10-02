@@ -200,6 +200,8 @@ func (x *scgiExchan) onEnd() {
 	x.region.Free()
 	x.netConn = nil
 	x.rawConn = nil
+	x.lastWrite = time.Time{}
+	x.lastRead = time.Time{}
 }
 
 func (x *scgiExchan) buffer256() []byte         { return x.stockBuffer[:] }

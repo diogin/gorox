@@ -38,7 +38,9 @@ type http1Conn_ struct { // for backend1Conn and server1Conn
 	rawConn    syscall.RawConn // for syscall, only usable when netConn is TCP/UDS
 	persistent bool            // keep the connection after current stream? true by default, will be changed by "connection: close" header field received from the remote side
 	// Conn states (zeros)
-	streamID int64 // next stream id
+	streamID  int64     // next stream id
+	lastWrite time.Time // deadline of last write operation
+	lastRead  time.Time // deadline of last read operation
 }
 
 func (c *http1Conn_) onGet(id int64, holder holder, netConn net.Conn, rawConn syscall.RawConn) {
@@ -52,6 +54,8 @@ func (c *http1Conn_) onPut() {
 	c.netConn = nil
 	c.rawConn = nil
 	c.streamID = 0
+	c.lastWrite = time.Time{}
+	c.lastRead = time.Time{}
 
 	c.httpConn_.onPut()
 }
@@ -108,6 +112,7 @@ type http1Stream_[C http1Conn] struct { // for backend1Stream and server1Stream
 
 func (s *http1Stream_[C]) onUse(conn C, id int64) {
 	s.httpStream_.onUse(conn)
+
 	s.id = id
 }
 func (s *http1Stream_[C]) onEnd() {
