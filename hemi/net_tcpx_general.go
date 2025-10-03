@@ -57,8 +57,8 @@ type tcpxConn_ struct { // for TCPXConn and TConn
 	lastRead    time.Time    // deadline of last read operation
 	lastWrite   time.Time    // deadline of last write operation
 	broken      atomic.Bool  // is connection broken?
-	Vector      net.Buffers  // used by Sendv()
-	FixedVector [4][]byte    // used by Sendv()
+	Vector      net.Buffers  // used by SendVector()
+	FixedVector [4][]byte    // used by SendVector()
 }
 
 func (c *tcpxConn_) onGet(id int64, holder holder, netConn net.Conn, rawConn syscall.RawConn) {
@@ -130,7 +130,7 @@ func (c *tcpxConn_) Send(data []byte) (err error) {
 	_, err = c.netConn.Write(data)
 	return
 }
-func (c *tcpxConn_) Sendv() (err error) {
+func (c *tcpxConn_) SendVector() (err error) {
 	_, err = c.Vector.WriteTo(c.netConn)
 	return
 }
