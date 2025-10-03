@@ -899,7 +899,7 @@ func (r *fcgiResponse) _recvContent() any { // to tempFile
 	}
 	var data []byte
 	for {
-		data, err = r.readContent()
+		data, err = r.readContent() // read timeout is set inside readContent()
 		if len(data) > 0 {
 			if _, e := contentFile.Write(data); e != nil {
 				err = e
@@ -1319,7 +1319,7 @@ func (r *fcgiRequest) proxyPassMessage(httpReq ServerRequest) error { // only fo
 		return err
 	}
 	for {
-		data, err := httpReq.readContent()
+		data, err := httpReq.readContent() // read timeout is set inside readContent()
 		if len(data) > 0 {
 			size := len(data)
 			r.stdinHeader[4], r.stdinHeader[5] = byte(size>>8), byte(size)

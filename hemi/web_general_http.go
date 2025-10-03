@@ -1891,7 +1891,7 @@ func (r *_httpOut_) _proxyPassMessage(in httpIn) error {
 		}
 	}
 	for {
-		data, err := in.readContent()
+		data, err := in.readContent() // read timeout is set inside readContent()
 		if len(data) >= 0 {
 			if e := proxyPass(data); e != nil {
 				return e

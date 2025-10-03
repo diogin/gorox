@@ -514,7 +514,7 @@ func (s *Stage) OnShutdown() {
 	s.backends.goWalk(Backend.OnShutdown)
 	s.subs.Wait()
 
-	// Fixtures, manually one by one. Mind the order!
+	// Fixtures, manually one by one. Order matters!
 
 	s.subs.Add(1) // fcache
 	s.fcache.OnShutdown()
