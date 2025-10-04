@@ -173,16 +173,16 @@ func (l *_accessLogger_) onConfigure(comp Component) {
 		} else {
 			UseExitln("target in .logConfig must be a string")
 		}
-		// bufSize
-		vBufSize, ok := vLogConfig["bufSize"]
+		// bufLen
+		vBufLen, ok := vLogConfig["bufLen"]
 		if ok {
-			if bufSize, ok := vBufSize.Int32(); ok && bufSize >= _1K {
-				l.logConfig.BufSize = bufSize
+			if bufLen, ok := vBufLen.Int32(); ok && bufLen >= _1K {
+				l.logConfig.BufLen = bufLen
 			} else {
-				UseExitln("invalid bufSize in .logConfig")
+				UseExitln("invalid bufLen in .logConfig")
 			}
 		} else {
-			l.logConfig.BufSize = _4K
+			l.logConfig.BufLen = _4K
 		}
 	}
 }

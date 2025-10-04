@@ -91,8 +91,8 @@ const hexDigits = "0123456789abcdef"
 
 func i64ToHex(i64 int64, hex []byte) int { return _intToHex(i64, hex, 16) }
 func i32ToHex(i32 int32, hex []byte) int { return _intToHex(i32, hex, 8) }
-func _intToHex[T int32 | int64](ixx T, hex []byte, bufSize int) int {
-	if len(hex) < bufSize {
+func _intToHex[T int32 | int64](ixx T, hex []byte, bufLen int) int {
+	if len(hex) < bufLen {
 		BugExitln("hex is too small")
 	}
 	if ixx < 0 {
@@ -115,8 +115,8 @@ func _intToHex[T int32 | int64](ixx T, hex []byte, bufSize int) int {
 
 func i64ToDec(i64 int64, dec []byte) int { return _intToDec(i64, dec, 19) } // 19 bytes are enough to hold a positive int64
 func i32ToDec(i32 int32, dec []byte) int { return _intToDec(i32, dec, 10) } // 10 bytes are enough to hold a positive int32
-func _intToDec[T int32 | int64](ixx T, dec []byte, bufSize int) int {
-	if len(dec) < bufSize {
+func _intToDec[T int32 | int64](ixx T, dec []byte, bufLen int) int {
+	if len(dec) < bufLen {
 		BugExitln("dec is too small")
 	}
 	if ixx < 0 {

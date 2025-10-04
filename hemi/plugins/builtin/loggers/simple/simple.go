@@ -23,7 +23,7 @@ func init() {
 		l.config = logConfig
 		l.file = logFile
 		l.queue = make(chan string)
-		l.buffer = make([]byte, logConfig.BufSize)
+		l.buffer = make([]byte, logConfig.BufLen)
 		l.size = len(l.buffer)
 		l.used = 0
 		go l.saver()
