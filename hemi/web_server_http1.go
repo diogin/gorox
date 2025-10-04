@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// HTTP/1.x server implementation. See RFC 9112.
+// HTTP/1.x server implementation. See RFC 9112 and RFC 6455.
 
 // For HTTP/1.x servers, both HTTP/1.0 and HTTP/1.1 are supported. Pipelining is supported but not optimized because it's rarely used.
 

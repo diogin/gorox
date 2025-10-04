@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// HTTP/3 types and protocol elements. See RFC 9114 and RFC 9204.
+// HTTP/3 types and protocol elements. See RFC 9114, RFC 9204, and RFC 9220.
 
 // Server Push is not supported because it's rarely used. Chrome and Firefox even removed it.
 

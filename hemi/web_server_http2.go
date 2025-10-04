@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// HTTP/2 server implementation. See RFC 9113 and RFC 7541.
+// HTTP/2 server implementation. See RFC 9113, RFC 7541, and RFC 8441.
 
 package hemi
 

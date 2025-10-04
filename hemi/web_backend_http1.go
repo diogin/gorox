@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// HTTP/1.x backend implementation. See RFC 9112.
+// HTTP/1.x backend implementation. See RFC 9112 and RFC 6455.
 
 // For HTTP/1.x backends, only HTTP/1.1 is used, so HTTP/1.x backends MUST support HTTP/1.1. Pipelining is not used.
 
