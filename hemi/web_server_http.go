@@ -187,48 +187,6 @@ func (g *httpGate_[S]) ReachLimit(concurrentConns int32) bool {
 	return concurrentConns > g.maxConcurrentConns
 }
 
-// serverConn is the server-side http connection.
-type serverConn interface { // for *server[1-3]Conn
-	// TODO
-}
-
-// _serverConn_ is a mixin.
-type _serverConn_[G httpGate] struct { // for server[1-3]Conn
-	// Conn states (stocks)
-	// Conn states (controlled)
-	// Conn states (non-zeros)
-	gate G // the gate to which the conn belongs
-	// Conn states (zeros)
-}
-
-func (c *_serverConn_[G]) onGet(gate G) {
-	c.gate = gate
-}
-func (c *_serverConn_[G]) onPut() {
-	var null G // nil
-	c.gate = null
-}
-
-func (c *_serverConn_[G]) Holder() httpHolder { return c.gate }
-
-// serverStream is the server-side http stream.
-type serverStream interface { // for *server[1-3]Stream
-	// TODO
-}
-
-// _serverStream_ is a mixin.
-type _serverStream_ struct { // for server[1-3]Stream
-	// Stream states (stocks)
-	// Stream states (controlled)
-	// Stream states (non-zeros)
-	// Stream states (zeros)
-}
-
-func (s *_serverStream_) onUse() {
-}
-func (s *_serverStream_) onEnd() {
-}
-
 // ServerRequest is the server-side http request.
 type ServerRequest interface { // for *server[1-3]Request
 	RemoteAddr() net.Addr

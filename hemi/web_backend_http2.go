@@ -108,12 +108,13 @@ type backend2Conn struct {
 	// Parent
 	http2Conn_[*backend2Stream]
 	// Mixins
-	_backendConn_[*http2Node]
 	// Assocs
 	next *backend2Conn // the linked-list
 	// Conn states (stocks)
 	// Conn states (controlled)
+	expireTime time.Time // when the conn is considered expired
 	// Conn states (non-zeros)
+	node *http2Node // the node to which the connection belongs
 	// Conn states (zeros)
 	_backend2Conn0 // all values in this struct must be zero by default!
 }
@@ -139,13 +140,20 @@ func putBackend2Conn(backConn *backend2Conn) {
 
 func (c *backend2Conn) onGet(id int64, node *http2Node, netConn net.Conn, rawConn syscall.RawConn) {
 	c.http2Conn_.onGet(id, node, netConn, rawConn)
-	c._backendConn_.onGet(node)
+	c.node = node
 }
 func (c *backend2Conn) onPut() {
 	c._backend2Conn0 = _backend2Conn0{}
 
-	c._backendConn_.onPut()
+	c.expireTime = time.Time{}
+	c.node = nil
 	c.http2Conn_.onPut()
+}
+
+func (c *backend2Conn) Holder() httpHolder { return c.node }
+
+func (c *backend2Conn) isAlive() bool {
+	return c.expireTime.IsZero() || time.Now().Before(c.expireTime)
 }
 
 func (c *backend2Conn) newStream() (*backend2Stream, error) { // used by http2Node
@@ -229,7 +237,6 @@ type backend2Stream struct {
 	// Parent
 	http2Stream_[*backend2Conn]
 	// Mixins
-	_backendStream_
 	// Assocs
 	response backend2Response // the backend-side http/2 response
 	request  backend2Request  // the backend-side http/2 request
@@ -268,7 +275,6 @@ func putBackend2Stream(backStream *backend2Stream) {
 
 func (s *backend2Stream) onUse(conn *backend2Conn, id uint32, remoteWindow int32) { // for non-zeros
 	s.http2Stream_.onUse(conn, id)
-	s._backendStream_.onUse()
 
 	s.localWindow = _64K1         // max size of r.bodyWindow
 	s.remoteWindow = remoteWindow // may be changed by the peer
@@ -284,7 +290,6 @@ func (s *backend2Stream) onEnd() { // for zeros
 	}
 	s._backend2Stream0 = _backend2Stream0{}
 
-	s._backendStream_.onEnd()
 	s.http2Stream_.onEnd()
 }
 

@@ -131,10 +131,10 @@ type server3Conn struct {
 	// Parent
 	http3Conn_[*server3Stream]
 	// Mixins
-	_serverConn_[*http3Gate]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
+	gate *http3Gate // the gate to which the conn belongs
 	// Conn states (zeros)
 	_server3Conn0 // all values in this struct must be zero by default!
 }
@@ -160,14 +160,16 @@ func putServer3Conn(servConn *server3Conn) {
 
 func (c *server3Conn) onGet(id int64, gate *http3Gate, quicConn *gotcp2.Conn) {
 	c.http3Conn_.onGet(id, gate, quicConn)
-	c._serverConn_.onGet(gate)
+	c.gate = gate
 }
 func (c *server3Conn) onPut() {
 	c._server3Conn0 = _server3Conn0{}
 
-	c._serverConn_.onPut()
+	c.gate = nil
 	c.http3Conn_.onPut()
 }
+
+func (c *server3Conn) Holder() httpHolder { return c.gate }
 
 func (c *server3Conn) serve() { // runner
 	// TODO
@@ -184,7 +186,6 @@ type server3Stream struct {
 	// Parent
 	http3Stream_[*server3Conn]
 	// Mixins
-	_serverStream_
 	// Assocs
 	request  server3Request  // the http/3 request.
 	response server3Response // the http/3 response.
@@ -226,7 +227,6 @@ func putServer3Stream(servStream *server3Stream) {
 
 func (s *server3Stream) onUse(conn *server3Conn, quicStream *gotcp2.Stream) { // for non-zeros
 	s.http3Stream_.onUse(conn, quicStream)
-	s._serverStream_.onUse()
 
 	s.request.onUse()
 	s.response.onUse()
@@ -240,7 +240,6 @@ func (s *server3Stream) onEnd() { // for zeros
 	}
 	s._server3Stream0 = _server3Stream0{}
 
-	s._serverStream_.onEnd()
 	s.http3Stream_.onEnd()
 }
 

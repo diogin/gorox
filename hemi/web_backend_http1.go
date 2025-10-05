@@ -200,13 +200,14 @@ type backend1Conn struct {
 	// Parent
 	http1Conn_
 	// Mixins
-	_backendConn_[*http1Node]
 	// Assocs
 	next   *backend1Conn  // the linked-list
 	stream backend1Stream // an http/1.x connection has exactly one stream
 	// Conn states (stocks)
 	// Conn states (controlled)
+	expireTime time.Time // when the conn is considered expired
 	// Conn states (non-zeros)
+	node *http1Node // the node to which the connection belongs
 	// Conn states (zeros)
 }
 
@@ -236,11 +237,18 @@ func putBackend1Conn(backConn *backend1Conn) {
 
 func (c *backend1Conn) onGet(id int64, node *http1Node, netConn net.Conn, rawConn syscall.RawConn) {
 	c.http1Conn_.onGet(id, node, netConn, rawConn)
-	c._backendConn_.onGet(node)
+	c.node = node
 }
 func (c *backend1Conn) onPut() {
-	c._backendConn_.onPut()
+	c.expireTime = time.Time{}
+	c.node = nil
 	c.http1Conn_.onPut()
+}
+
+func (c *backend1Conn) Holder() httpHolder { return c.node }
+
+func (c *backend1Conn) isAlive() bool {
+	return c.expireTime.IsZero() || time.Now().Before(c.expireTime)
 }
 
 func (c *backend1Conn) newStream() (*backend1Stream, error) { // used by http1Node
@@ -265,7 +273,6 @@ type backend1Stream struct {
 	// Parent
 	http1Stream_[*backend1Conn]
 	// Mixins
-	_backendStream_
 	// Assocs
 	response backend1Response // the backend-side http/1.x response
 	request  backend1Request  // the backend-side http/1.x request
@@ -278,7 +285,6 @@ type backend1Stream struct {
 
 func (s *backend1Stream) onUse(conn *backend1Conn, id int64) { // for non-zeros
 	s.http1Stream_.onUse(conn, id)
-	s._backendStream_.onUse()
 
 	s.response.onUse()
 	s.request.onUse()
@@ -291,7 +297,6 @@ func (s *backend1Stream) onEnd() { // for zeros
 		s.socket = nil
 	}
 
-	s._backendStream_.onEnd()
 	s.http1Stream_.onEnd()
 }
 

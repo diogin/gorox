@@ -22,13 +22,13 @@ type server1Conn struct {
 	// Parent
 	http1Conn_
 	// Mixins
-	_serverConn_[*httpxGate]
 	// Assocs
 	stream server1Stream // an http/1.x connection has exactly one stream
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	closeSafe bool // if false, send a FIN first to avoid TCP's RST following immediate close(). true by default
+	gate      *httpxGate // the gate to which the conn belongs
+	closeSafe bool       // if false, send a FIN first to avoid TCP's RST following immediate close(). true by default
 	// Conn states (zeros)
 }
 
@@ -58,8 +58,8 @@ func putServer1Conn(servConn *server1Conn) {
 
 func (c *server1Conn) onGet(id int64, gate *httpxGate, netConn net.Conn, rawConn syscall.RawConn) {
 	c.http1Conn_.onGet(id, gate, netConn, rawConn)
-	c._serverConn_.onGet(gate)
 
+	c.gate = gate
 	c.closeSafe = true
 
 	// Input is conn scoped but put in stream scoped request for convenience
@@ -75,9 +75,11 @@ func (c *server1Conn) onPut() {
 	}
 	servReq.inputNext, servReq.inputEdge = 0, 0
 
-	c._serverConn_.onPut()
+	c.gate = nil
 	c.http1Conn_.onPut()
 }
+
+func (c *server1Conn) Holder() httpHolder { return c.gate }
 
 func (c *server1Conn) serve() { // runner
 	stream := &c.stream
@@ -129,7 +131,6 @@ type server1Stream struct {
 	// Parent
 	http1Stream_[*server1Conn]
 	// Mixins
-	_serverStream_
 	// Assocs
 	request  server1Request  // the server-side http/1.x request
 	response server1Response // the server-side http/1.x response
@@ -142,7 +143,6 @@ type server1Stream struct {
 
 func (s *server1Stream) onUse(conn *server1Conn, id int64) { // for non-zeros
 	s.http1Stream_.onUse(conn, id)
-	s._serverStream_.onUse()
 
 	s.request.onUse()
 	s.response.onUse()
@@ -155,7 +155,6 @@ func (s *server1Stream) onEnd() { // for zeros
 		s.socket = nil
 	}
 
-	s._serverStream_.onEnd()
 	s.http1Stream_.onEnd()
 }
 

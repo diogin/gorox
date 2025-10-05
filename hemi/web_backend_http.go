@@ -85,36 +85,6 @@ func (n *httpNode_[B]) onPrepare() {
 	n._httpHolder_.onPrepare(n, 0755)
 }
 
-// backendConn is the backend-side http connection.
-type backendConn interface { // for *backend[1-3]Conn
-	isAlive() bool
-}
-
-// _backendConn_ is a mixin.
-type _backendConn_[N HTTPNode] struct { // for backend[1-3]Conn
-	// Conn states (stocks)
-	// Conn states (controlled)
-	expireTime time.Time // when the conn is considered expired
-	// Conn states (non-zeros)
-	node N // the node to which the connection belongs
-	// Conn states (zeros)
-}
-
-func (c *_backendConn_[N]) onGet(node N) {
-	c.node = node
-}
-func (c *_backendConn_[N]) onPut() {
-	c.expireTime = time.Time{}
-	var null N // nil
-	c.node = null
-}
-
-func (c *_backendConn_[N]) Holder() httpHolder { return c.node }
-
-func (c *_backendConn_[N]) isAlive() bool {
-	return c.expireTime.IsZero() || time.Now().Before(c.expireTime)
-}
-
 // BackendStream is the backend-side http stream.
 type BackendStream interface { // for *backend[1-3]Stream
 	Response() BackendResponse
@@ -123,19 +93,6 @@ type BackendStream interface { // for *backend[1-3]Stream
 
 	isBroken() bool
 	markBroken()
-}
-
-// _backendStream_ is a mixin.
-type _backendStream_ struct { // for backend[1-3]Stream
-	// Stream states (stocks)
-	// Stream states (controlled)
-	// Stream states (non-zeros)
-	// Stream states (zeros)
-}
-
-func (s *_backendStream_) onUse() {
-}
-func (s *_backendStream_) onEnd() {
 }
 
 // BackendResponse is the backend-side http response.

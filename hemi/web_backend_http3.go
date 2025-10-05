@@ -101,12 +101,13 @@ type backend3Conn struct {
 	// Parent
 	http3Conn_[*backend3Stream]
 	// Mixins
-	_backendConn_[*http3Node]
 	// Assocs
 	next *backend3Conn // the linked-list
 	// Conn states (stocks)
 	// Conn states (controlled)
+	expireTime time.Time // when the conn is considered expired
 	// Conn states (non-zeros)
+	node *http3Node // the node to which the connection belongs
 	// Conn states (zeros)
 	_backend3Conn0 // all values in this struct must be zero by default!
 }
@@ -132,13 +133,20 @@ func putBackend3Conn(backConn *backend3Conn) {
 
 func (c *backend3Conn) onGet(id int64, node *http3Node, quicConn *gotcp2.Conn) {
 	c.http3Conn_.onGet(id, node, quicConn)
-	c._backendConn_.onGet(node)
+	c.node = node
 }
 func (c *backend3Conn) onPut() {
 	c._backend3Conn0 = _backend3Conn0{}
 
-	c._backendConn_.onPut()
+	c.expireTime = time.Time{}
+	c.node = nil
 	c.http3Conn_.onPut()
+}
+
+func (c *backend3Conn) Holder() httpHolder { return c.node }
+
+func (c *backend3Conn) isAlive() bool {
+	return c.expireTime.IsZero() || time.Now().Before(c.expireTime)
 }
 
 func (c *backend3Conn) newStream() (*backend3Stream, error) { // used by http3Node
@@ -163,7 +171,6 @@ type backend3Stream struct {
 	// Parent
 	http3Stream_[*backend3Conn]
 	// Mixins
-	_backendStream_
 	// Assocs
 	response backend3Response // the backend-side http/3 response
 	request  backend3Request  // the backend-side http/3 request
@@ -202,7 +209,6 @@ func putBackend3Stream(backStream *backend3Stream) {
 
 func (s *backend3Stream) onUse(conn *backend3Conn, quicStream *gotcp2.Stream) { // for non-zeros
 	s.http3Stream_.onUse(conn, quicStream)
-	s._backendStream_.onUse()
 
 	s.response.onUse()
 	s.request.onUse()
@@ -216,7 +222,6 @@ func (s *backend3Stream) onEnd() { // for zeros
 	}
 	s._backend3Stream0 = _backend3Stream0{}
 
-	s._backendStream_.onEnd()
 	s.http3Stream_.onEnd()
 }
 
