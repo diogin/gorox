@@ -20,15 +20,14 @@ import (
 // server1Conn is the server-side HTTP/1.x connection.
 type server1Conn struct {
 	// Parent
-	http1Conn_
+	http1Conn_[*httpxGate]
 	// Mixins
 	// Assocs
 	stream server1Stream // an http/1.x connection has exactly one stream
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	gate      *httpxGate // the gate to which the conn belongs
-	closeSafe bool       // if false, send a FIN first to avoid TCP's RST following immediate close(). true by default
+	closeSafe bool // if false, send a FIN first to avoid TCP's RST following immediate close(). true by default
 	// Conn states (zeros)
 }
 
@@ -59,7 +58,6 @@ func putServer1Conn(servConn *server1Conn) {
 func (c *server1Conn) onGet(id int64, gate *httpxGate, netConn net.Conn, rawConn syscall.RawConn) {
 	c.http1Conn_.onGet(id, gate, netConn, rawConn)
 
-	c.gate = gate
 	c.closeSafe = true
 
 	// Input is conn scoped but put in stream scoped request for convenience
@@ -75,11 +73,8 @@ func (c *server1Conn) onPut() {
 	}
 	servReq.inputNext, servReq.inputEdge = 0, 0
 
-	c.gate = nil
 	c.http1Conn_.onPut()
 }
-
-func (c *server1Conn) Holder() httpHolder { return c.gate }
 
 func (c *server1Conn) serve() { // runner
 	stream := &c.stream
@@ -121,8 +116,8 @@ func (c *server1Conn) serve() { // runner
 	}
 	netConn.Close()
 
-	c.gate.DecConcurrentConns()
-	c.gate.DecConn()
+	c.holder.DecConcurrentConns()
+	c.holder.DecConn()
 	putServer1Conn(c)
 }
 
@@ -175,7 +170,7 @@ func (s *server1Stream) execute() {
 	}
 
 	conn := s.conn
-	server := conn.gate.server
+	server := conn.holder.server
 
 	// RFC 9112 (section 3.3):
 	// If the server's configuration provides for a fixed URI scheme, or a
@@ -242,7 +237,7 @@ func (s *server1Stream) execute() {
 			return
 		}
 		conn.cumulativeStreams.Add(1)
-		if maxCumulativeStreams := server.maxCumulativeStreamsPerConn; (maxCumulativeStreams > 0 && conn.cumulativeStreams.Load() == maxCumulativeStreams) || !req.KeepAlive() || conn.gate.IsShut() {
+		if maxCumulativeStreams := server.maxCumulativeStreamsPerConn; (maxCumulativeStreams > 0 && conn.cumulativeStreams.Load() == maxCumulativeStreams) || !req.KeepAlive() || conn.holder.IsShut() {
 			conn.persistent = false // reaches limit, or client told us to close, or gate was shut
 		}
 
@@ -263,7 +258,7 @@ func (s *server1Stream) execute() {
 }
 func (s *server1Stream) _serveAbnormal(req *server1Request, resp *server1Response) { // 4xx & 5xx
 	if DebugLevel() >= 2 {
-		Printf("server=%s gate=%d conn=%d headResult=%d\n", s.conn.gate.server.CompName(), s.conn.gate.ID(), s.conn.id, s.request.headResult)
+		Printf("server=%s gate=%d conn=%d headResult=%d\n", s.conn.holder.server.CompName(), s.conn.holder.ID(), s.conn.id, s.request.headResult)
 	}
 	s.conn.persistent = false // we are in abnormal state, so close anyway
 
@@ -957,7 +952,7 @@ func (r *server1Response) proxyPassBytes(data []byte) error { return r.out1.prox
 func (r *server1Response) finalizeHeaders() { // add at most 256 bytes
 	// date: Sun, 06 Nov 1994 08:49:37 GMT\r\n
 	if r.iDate == 0 {
-		clock := r.stream.(*server1Stream).conn.gate.stage.clock
+		clock := r.stream.(*server1Stream).conn.holder.stage.clock
 		r.outputEdge += uint16(clock.writeDate1(r.output[r.outputEdge:]))
 	}
 	// expires: Sun, 06 Nov 1994 08:49:37 GMT\r\n

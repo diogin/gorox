@@ -23,6 +23,7 @@ import (
 // httpHolder
 type httpHolder interface { // for _httpHolder_
 	// Imports
+	holder
 	contentSaver
 	// Methods
 	MaxMemoryContentSize() int32 // allowed to load into memory
@@ -64,8 +65,8 @@ func (h *_httpHolder_) MaxMemoryContentSize() int32 { return h.maxMemoryContentS
 
 // httpConn
 type httpConn interface { // for *http[1-3]Conn
-	Holder() httpHolder
 	ID() int64
+	Holder() httpHolder
 	UDSMode() bool
 	TLSMode() bool
 	MakeTempName(dst []byte, unixTime int64) int
@@ -75,46 +76,42 @@ type httpConn interface { // for *http[1-3]Conn
 }
 
 // httpConn_ is a parent.
-type httpConn_ struct { // for http[1-3]Conn_
+type httpConn_[H httpHolder] struct { // for http[1-3]Conn_
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	id           int64         // the conn id
-	stage        *Stage        // current stage, for convenience
-	udsMode      bool          // for convenience
-	tlsMode      bool          // for convenience
-	readTimeout  time.Duration // for convenience
-	writeTimeout time.Duration // for convenience
+	id     int64 // the conn id
+	holder H     // HTTPNode or httpGate
 	// Conn states (zeros)
 	cumulativeStreams atomic.Int32 // cumulative num of streams served or fired by this conn
 	broken            atomic.Bool  // is conn broken?
 	counter           atomic.Int64 // can be used to generate a random number
 }
 
-func (c *httpConn_) onGet(id int64, holder holder) {
+func (c *httpConn_[H]) onGet(id int64, holder H) {
 	c.id = id
-	c.stage = holder.Stage()
-	c.udsMode = holder.UDSMode()
-	c.tlsMode = holder.TLSMode()
-	c.readTimeout = holder.ReadTimeout()
-	c.writeTimeout = holder.WriteTimeout()
+	c.holder = holder
 }
-func (c *httpConn_) onPut() {
-	c.stage = nil
+func (c *httpConn_[H]) onPut() {
+	var null H // nil
+	c.holder = null
 	c.cumulativeStreams.Store(0)
 	c.broken.Store(false)
 	c.counter.Store(0)
 }
 
-func (c *httpConn_) ID() int64     { return c.id }
-func (c *httpConn_) UDSMode() bool { return c.udsMode }
-func (c *httpConn_) TLSMode() bool { return c.tlsMode }
-func (c *httpConn_) MakeTempName(dst []byte, unixTime int64) int {
-	return makeTempName(dst, c.stage.ID(), unixTime, c.id, c.counter.Add(1))
+func (c *httpConn_[H]) ID() int64 { return c.id }
+
+func (c *httpConn_[H]) Holder() httpHolder { return c.holder }
+
+func (c *httpConn_[H]) UDSMode() bool { return c.holder.UDSMode() }
+func (c *httpConn_[H]) TLSMode() bool { return c.holder.TLSMode() }
+func (c *httpConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
+	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
 
-func (c *httpConn_) markBroken()    { c.broken.Store(true) }
-func (c *httpConn_) isBroken() bool { return c.broken.Load() }
+func (c *httpConn_[H]) markBroken()    { c.broken.Store(true) }
+func (c *httpConn_[H]) isBroken() bool { return c.broken.Load() }
 
 // httpStream
 type httpStream interface { // for *http[1-3]Stream

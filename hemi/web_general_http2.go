@@ -27,9 +27,9 @@ type http2Conn interface { // for *backend2Conn and *server2Conn
 }
 
 // http2Conn_ is a parent.
-type http2Conn_[S http2Stream] struct { // for backend2Conn and server2Conn
+type http2Conn_[H httpHolder, S http2Stream] struct { // for backend2Conn and server2Conn
 	// Parent
-	httpConn_
+	httpConn_[H]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	outFrame http2OutFrame[S] // used by c.manage() itself to send special out frames. immediately reset after use
@@ -76,7 +76,7 @@ type _http2Conn0 struct { // for fast reset, entirely
 	contFore           uint16 // incoming continuation part (header or payload) ends at c.inBuffer.buf[c.contFore]
 }
 
-func (c *http2Conn_[S]) onGet(id int64, holder holder, netConn net.Conn, rawConn syscall.RawConn) {
+func (c *http2Conn_[H, S]) onGet(id int64, holder H, netConn net.Conn, rawConn syscall.RawConn) {
 	c.httpConn_.onGet(id, holder)
 
 	c.netConn = netConn
@@ -99,7 +99,7 @@ func (c *http2Conn_[S]) onGet(id int64, holder holder, netConn net.Conn, rawConn
 	}
 	c.encodeTable.init()
 }
-func (c *http2Conn_[S]) onPut() {
+func (c *http2Conn_[H, S]) onPut() {
 	c.netConn = nil
 	c.rawConn = nil
 	// c.inBuffer is reserved
@@ -122,7 +122,7 @@ func (c *http2Conn_[S]) onPut() {
 	c.httpConn_.onPut()
 }
 
-func (c *http2Conn_[S]) receive(asServer bool) { // runner, employed by c.manage()
+func (c *http2Conn_[H, S]) receive(asServer bool) { // runner, employed by c.manage()
 	if DebugLevel() >= 1 {
 		defer Printf("conn=%d c.receive() quit\n", c.id)
 	}
@@ -155,16 +155,16 @@ func (c *http2Conn_[S]) receive(asServer bool) { // runner, employed by c.manage
 	}
 }
 
-func (c *http2Conn_[S]) _getFreeSlot() uint8 {
+func (c *http2Conn_[H, S]) _getFreeSlot() uint8 {
 	c.freeSlotsTop++
 	return c.freeSlots[c.freeSlotsTop]
 }
-func (c *http2Conn_[S]) _putFreeSlot(slot uint8) {
+func (c *http2Conn_[H, S]) _putFreeSlot(slot uint8) {
 	c.freeSlots[c.freeSlotsTop] = slot
 	c.freeSlotsTop--
 }
 
-func (c *http2Conn_[S]) appendStream(stream S) { // O(1)
+func (c *http2Conn_[H, S]) appendStream(stream S) { // O(1)
 	slot := c._getFreeSlot()
 	stream.setSlot(slot)
 	c.activeStreams[slot] = stream
@@ -173,7 +173,7 @@ func (c *http2Conn_[S]) appendStream(stream S) { // O(1)
 		Printf("conn=%d appendStream=%d at %d\n", c.id, stream.nativeID(), slot)
 	}
 }
-func (c *http2Conn_[S]) searchStream(streamID uint32) S { // O(http2MaxConcurrentStreams), but in practice this linear search algorithm should be fast enough
+func (c *http2Conn_[H, S]) searchStream(streamID uint32) S { // O(http2MaxConcurrentStreams), but in practice this linear search algorithm should be fast enough
 	c.activeStreamIDs[http2MaxConcurrentStreams] = streamID // the stream id to search for
 	slot := uint8(0)
 	for c.activeStreamIDs[slot] != streamID {
@@ -189,7 +189,7 @@ func (c *http2Conn_[S]) searchStream(streamID uint32) S { // O(http2MaxConcurren
 		return null
 	}
 }
-func (c *http2Conn_[S]) retireStream(stream S) { // O(1)
+func (c *http2Conn_[H, S]) retireStream(stream S) { // O(1)
 	slot := stream.getSlot()
 	if DebugLevel() >= 2 {
 		Printf("conn=%d retireStream=%d at %d\n", c.id, stream.nativeID(), slot)
@@ -200,7 +200,7 @@ func (c *http2Conn_[S]) retireStream(stream S) { // O(1)
 	c._putFreeSlot(slot)
 }
 
-func (c *http2Conn_[S]) recvInFrame() (*http2InFrame, error) { // excluding pushPromise, which is not supported, and continuation, which cannot arrive alone
+func (c *http2Conn_[H, S]) recvInFrame() (*http2InFrame, error) { // excluding pushPromise, which is not supported, and continuation, which cannot arrive alone
 	// Receive frame header
 	c.sectBack = c.sectFore
 	if err := c.setReadDeadline(); err != nil {
@@ -248,7 +248,7 @@ func (c *http2Conn_[S]) recvInFrame() (*http2InFrame, error) { // excluding push
 	}
 	return inFrame, nil
 }
-func (c *http2Conn_[S]) _growInFrame(size uint16) error {
+func (c *http2Conn_[H, S]) _growInFrame(size uint16) error {
 	c.sectFore += size // size is limited, so won't overflow
 	if c.sectFore <= c.inBufferEdge {
 		return nil
@@ -269,7 +269,7 @@ func (c *http2Conn_[S]) _growInFrame(size uint16) error {
 	}
 	return c._fillInBuffer(c.sectFore - c.inBufferEdge)
 }
-func (c *http2Conn_[S]) _fillInBuffer(size uint16) error {
+func (c *http2Conn_[H, S]) _fillInBuffer(size uint16) error {
 	n, err := c.readAtLeast(c.inBuffer.buf[c.inBufferEdge:], int(size))
 	if DebugLevel() >= 2 {
 		Printf("--------------------- conn=%d CALL READ=%d -----------------------\n", c.id, n)
@@ -281,7 +281,7 @@ func (c *http2Conn_[S]) _fillInBuffer(size uint16) error {
 	return err
 }
 
-func (c *http2Conn_[S]) _coalesceContinuations(fieldsInFrame *http2InFrame) error { // into a single fields frame
+func (c *http2Conn_[H, S]) _coalesceContinuations(fieldsInFrame *http2InFrame) error { // into a single fields frame
 	fieldsInFrame.inBuffer = nil // unset temporarily, will be restored at the end of continuations
 	var continuationInFrame http2InFrame
 	c.contBack, c.contFore = c.sectFore, c.sectFore
@@ -322,7 +322,7 @@ func (c *http2Conn_[S]) _coalesceContinuations(fieldsInFrame *http2InFrame) erro
 	}
 	return http2ErrorEnhanceYourCalm
 }
-func (c *http2Conn_[S]) _growContinuationFrame(size uint16, fieldsInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) _growContinuationFrame(size uint16, fieldsInFrame *http2InFrame) error {
 	c.contFore += size                // won't overflow
 	if c.contFore <= c.inBufferEdge { // inBuffer is sufficient
 		return nil
@@ -357,12 +357,12 @@ func (c *http2Conn_[S]) _growContinuationFrame(size uint16, fieldsInFrame *http2
 	return c._fillInBuffer(c.contFore - c.inBufferEdge)
 }
 
-func (c *http2Conn_[S]) processDataInFrame(dataInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processDataInFrame(dataInFrame *http2InFrame) error {
 	// TODO
 	return nil
 }
-func (c *http2Conn_[S]) processPriorityInFrame(priorityInFrame *http2InFrame) error { return nil } // do nothing, priority frames are ignored
-func (c *http2Conn_[S]) processResetStreamInFrame(resetStreamInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processPriorityInFrame(priorityInFrame *http2InFrame) error { return nil } // do nothing, priority frames are ignored
+func (c *http2Conn_[H, S]) processResetStreamInFrame(resetStreamInFrame *http2InFrame) error {
 	streamID := resetStreamInFrame.streamID
 	if streamID > c.lastStreamID {
 		// RST_STREAM frames MUST NOT be sent for a stream in the "idle" state. If a RST_STREAM frame identifying an idle stream is received,
@@ -372,10 +372,10 @@ func (c *http2Conn_[S]) processResetStreamInFrame(resetStreamInFrame *http2InFra
 	// TODO
 	return nil
 }
-func (c *http2Conn_[S]) processPushPromiseInFrame(pushPromiseInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processPushPromiseInFrame(pushPromiseInFrame *http2InFrame) error {
 	panic("pushPromise frames should be rejected priorly")
 }
-func (c *http2Conn_[S]) processPingInFrame(pingInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processPingInFrame(pingInFrame *http2InFrame) error {
 	if pingInFrame.ack { // pong
 		if !c.pingSent { // TODO: confirm this
 			return http2ErrorProtocol
@@ -397,10 +397,10 @@ func (c *http2Conn_[S]) processPingInFrame(pingInFrame *http2InFrame) error {
 	pongOutFrame.zero()
 	return err
 }
-func (c *http2Conn_[S]) processGoawayInFrame(goawayInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processGoawayInFrame(goawayInFrame *http2InFrame) error {
 	panic("goaway frames should be hijacked by c.receive()")
 }
-func (c *http2Conn_[S]) processWindowUpdateInFrame(windowUpdateInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processWindowUpdateInFrame(windowUpdateInFrame *http2InFrame) error {
 	windowSize := binary.BigEndian.Uint32(windowUpdateInFrame.effective())
 	if windowSize == 0 || windowSize > _2G1 {
 		// The legal range for the increment to the flow-control window is 1 to 2^31 - 1 (2,147,483,647) octets.
@@ -411,11 +411,11 @@ func (c *http2Conn_[S]) processWindowUpdateInFrame(windowUpdateInFrame *http2InF
 	Printf("conn=%d stream=%d windowUpdate=%d\n", c.id, windowUpdateInFrame.streamID, windowSize)
 	return nil
 }
-func (c *http2Conn_[S]) processContinuationInFrame(continuationInFrame *http2InFrame) error {
+func (c *http2Conn_[H, S]) processContinuationInFrame(continuationInFrame *http2InFrame) error {
 	panic("lonely continuation frames should be rejected priorly")
 }
 
-func (c *http2Conn_[S]) _updatePeerSettings(settingsInFrame *http2InFrame, asClient bool) error {
+func (c *http2Conn_[H, S]) _updatePeerSettings(settingsInFrame *http2InFrame, asClient bool) error {
 	settings := settingsInFrame.effective()
 	windowDelta := int32(0)
 	for i, j, n := uint16(0), uint16(0), settingsInFrame.length/6; i < n; i++ {
@@ -458,7 +458,7 @@ func (c *http2Conn_[S]) _updatePeerSettings(settingsInFrame *http2InFrame, asCli
 	return nil
 }
 
-func (c *http2Conn_[S]) decodeFields(fields []byte, input *[]byte) bool {
+func (c *http2Conn_[H, S]) decodeFields(fields []byte, input *[]byte) bool {
 	// TODO
 	return false
 	/*
@@ -535,7 +535,7 @@ func (c *http2Conn_[S]) decodeFields(fields []byte, input *[]byte) bool {
 	*/
 }
 
-func (c *http2Conn_[S]) sendOutFrame(outFrame *http2OutFrame[S]) error {
+func (c *http2Conn_[H, S]) sendOutFrame(outFrame *http2OutFrame[S]) error {
 	outHeader := outFrame.encodeHeader()
 	if len(outFrame.payload) > 0 {
 		c.vector = c.fixedVector[0:2]
@@ -555,15 +555,15 @@ func (c *http2Conn_[S]) sendOutFrame(outFrame *http2OutFrame[S]) error {
 	return err
 }
 
-func (c *http2Conn_[S]) encodeFields(fields []byte, output *[]byte) {
+func (c *http2Conn_[H, S]) encodeFields(fields []byte, output *[]byte) {
 	// TODO
 	// uses c.encodeTable
 }
 
-func (c *http2Conn_[S]) remoteAddr() net.Addr { return c.netConn.RemoteAddr() }
+func (c *http2Conn_[H, S]) remoteAddr() net.Addr { return c.netConn.RemoteAddr() }
 
-func (c *http2Conn_[S]) setReadDeadline() error {
-	if deadline := time.Now().Add(c.readTimeout); deadline.Sub(c.lastRead) >= time.Second {
+func (c *http2Conn_[H, S]) setReadDeadline() error {
+	if deadline := time.Now().Add(c.holder.ReadTimeout()); deadline.Sub(c.lastRead) >= time.Second {
 		if err := c.netConn.SetReadDeadline(deadline); err != nil {
 			return err
 		}
@@ -571,8 +571,8 @@ func (c *http2Conn_[S]) setReadDeadline() error {
 	}
 	return nil
 }
-func (c *http2Conn_[S]) setWriteDeadline() error {
-	if deadline := time.Now().Add(c.writeTimeout); deadline.Sub(c.lastWrite) >= time.Second {
+func (c *http2Conn_[H, S]) setWriteDeadline() error {
+	if deadline := time.Now().Add(c.holder.WriteTimeout()); deadline.Sub(c.lastWrite) >= time.Second {
 		if err := c.netConn.SetWriteDeadline(deadline); err != nil {
 			return err
 		}
@@ -581,11 +581,11 @@ func (c *http2Conn_[S]) setWriteDeadline() error {
 	return nil
 }
 
-func (c *http2Conn_[S]) readAtLeast(dst []byte, min int) (int, error) {
+func (c *http2Conn_[H, S]) readAtLeast(dst []byte, min int) (int, error) {
 	return io.ReadAtLeast(c.netConn, dst, min)
 }
-func (c *http2Conn_[S]) write(src []byte) (int, error) { return c.netConn.Write(src) }
-func (c *http2Conn_[S]) writeVec(srcVec *net.Buffers) (int64, error) {
+func (c *http2Conn_[H, S]) write(src []byte) (int, error) { return c.netConn.Write(src) }
+func (c *http2Conn_[H, S]) writeVec(srcVec *net.Buffers) (int64, error) {
 	return srcVec.WriteTo(c.netConn)
 }
 

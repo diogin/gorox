@@ -288,12 +288,11 @@ func (g *httpxGate) justClose(netConn net.Conn) {
 // server2Conn is the server-side HTTP/2 connection.
 type server2Conn struct {
 	// Parent
-	http2Conn_[*server2Stream]
+	http2Conn_[*httpxGate, *server2Stream]
 	// Mixins
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	gate *httpxGate // the gate to which the conn belongs
 	// Conn states (zeros)
 	_server2Conn0 // all values in this struct must be zero by default!
 }
@@ -322,16 +321,12 @@ func putServer2Conn(servConn *server2Conn) {
 
 func (c *server2Conn) onGet(id int64, gate *httpxGate, netConn net.Conn, rawConn syscall.RawConn) {
 	c.http2Conn_.onGet(id, gate, netConn, rawConn)
-	c.gate = gate
 }
 func (c *server2Conn) onPut() {
 	c._server2Conn0 = _server2Conn0{}
 
-	c.gate = nil
 	c.http2Conn_.onPut()
 }
-
-func (c *server2Conn) Holder() httpHolder { return c.gate }
 
 var server2PrefaceAndMore = []byte{
 	// server preface settings
@@ -551,8 +546,8 @@ func (c *server2Conn) closeConn() {
 		Printf("conn=%d closed by manage()\n", c.id)
 	}
 	c.netConn.Close()
-	c.gate.DecConcurrentConns()
-	c.gate.DecConn()
+	c.holder.DecConcurrentConns()
+	c.holder.DecConn()
 }
 
 // server2Stream is the server-side HTTP/2 stream.

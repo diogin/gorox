@@ -28,9 +28,9 @@ type http1Conn interface { // for *backend1Conn and *server1Conn
 }
 
 // http1Conn_ is a parent.
-type http1Conn_ struct { // for backend1Conn and server1Conn
+type http1Conn_[H httpHolder] struct { // for backend1Conn and server1Conn
 	// Parent
-	httpConn_
+	httpConn_[H]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
@@ -43,14 +43,14 @@ type http1Conn_ struct { // for backend1Conn and server1Conn
 	lastRead  time.Time // deadline of last read operation
 }
 
-func (c *http1Conn_) onGet(id int64, holder holder, netConn net.Conn, rawConn syscall.RawConn) {
+func (c *http1Conn_[H]) onGet(id int64, holder H, netConn net.Conn, rawConn syscall.RawConn) {
 	c.httpConn_.onGet(id, holder)
 
 	c.netConn = netConn
 	c.rawConn = rawConn
 	c.persistent = true
 }
-func (c *http1Conn_) onPut() {
+func (c *http1Conn_[H]) onPut() {
 	c.netConn = nil
 	c.rawConn = nil
 	c.streamID = 0
@@ -60,15 +60,15 @@ func (c *http1Conn_) onPut() {
 	c.httpConn_.onPut()
 }
 
-func (c *http1Conn_) nextStreamID() int64 {
+func (c *http1Conn_[H]) nextStreamID() int64 {
 	c.streamID++
 	return c.streamID
 }
 
-func (c *http1Conn_) remoteAddr() net.Addr { return c.netConn.RemoteAddr() }
+func (c *http1Conn_[H]) remoteAddr() net.Addr { return c.netConn.RemoteAddr() }
 
-func (c *http1Conn_) setReadDeadline() error {
-	if deadline := time.Now().Add(c.readTimeout); deadline.Sub(c.lastRead) >= time.Second {
+func (c *http1Conn_[H]) setReadDeadline() error {
+	if deadline := time.Now().Add(c.holder.ReadTimeout()); deadline.Sub(c.lastRead) >= time.Second {
 		if err := c.netConn.SetReadDeadline(deadline); err != nil {
 			return err
 		}
@@ -76,8 +76,8 @@ func (c *http1Conn_) setReadDeadline() error {
 	}
 	return nil
 }
-func (c *http1Conn_) setWriteDeadline() error {
-	if deadline := time.Now().Add(c.writeTimeout); deadline.Sub(c.lastWrite) >= time.Second {
+func (c *http1Conn_[H]) setWriteDeadline() error {
+	if deadline := time.Now().Add(c.holder.WriteTimeout()); deadline.Sub(c.lastWrite) >= time.Second {
 		if err := c.netConn.SetWriteDeadline(deadline); err != nil {
 			return err
 		}
@@ -86,10 +86,12 @@ func (c *http1Conn_) setWriteDeadline() error {
 	return nil
 }
 
-func (c *http1Conn_) read(dst []byte) (int, error)                { return c.netConn.Read(dst) }
-func (c *http1Conn_) readFull(dst []byte) (int, error)            { return io.ReadFull(c.netConn, dst) }
-func (c *http1Conn_) write(src []byte) (int, error)               { return c.netConn.Write(src) }
-func (c *http1Conn_) writeVec(srcVec *net.Buffers) (int64, error) { return srcVec.WriteTo(c.netConn) }
+func (c *http1Conn_[H]) read(dst []byte) (int, error)     { return c.netConn.Read(dst) }
+func (c *http1Conn_[H]) readFull(dst []byte) (int, error) { return io.ReadFull(c.netConn, dst) }
+func (c *http1Conn_[H]) write(src []byte) (int, error)    { return c.netConn.Write(src) }
+func (c *http1Conn_[H]) writeVec(srcVec *net.Buffers) (int64, error) {
+	return srcVec.WriteTo(c.netConn)
+}
 
 // http1Stream
 type http1Stream interface { // for *backend1Stream and *server1Stream

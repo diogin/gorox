@@ -44,7 +44,7 @@ func (b *HTTP1Backend) AcquireStream(servReq ServerRequest) (BackendStream, erro
 }
 func (b *HTTP1Backend) ReleaseStream(backStream BackendStream) {
 	backStream1 := backStream.(*backend1Stream)
-	backStream1.conn.node.storeStream(backStream1)
+	backStream1.conn.holder.storeStream(backStream1)
 }
 
 // http1Node is a node in HTTP1Backend.
@@ -198,7 +198,7 @@ func (n *http1Node) closeIdle() int              { return n.backConns.closeIdle(
 // backend1Conn is the backend-side HTTP/1.x connection.
 type backend1Conn struct {
 	// Parent
-	http1Conn_
+	http1Conn_[*http1Node]
 	// Mixins
 	// Assocs
 	next   *backend1Conn  // the linked-list
@@ -207,7 +207,6 @@ type backend1Conn struct {
 	// Conn states (controlled)
 	expireTime time.Time // when the conn is considered expired
 	// Conn states (non-zeros)
-	node *http1Node // the node to which the connection belongs
 	// Conn states (zeros)
 }
 
@@ -237,15 +236,11 @@ func putBackend1Conn(backConn *backend1Conn) {
 
 func (c *backend1Conn) onGet(id int64, node *http1Node, netConn net.Conn, rawConn syscall.RawConn) {
 	c.http1Conn_.onGet(id, node, netConn, rawConn)
-	c.node = node
 }
 func (c *backend1Conn) onPut() {
 	c.expireTime = time.Time{}
-	c.node = nil
 	c.http1Conn_.onPut()
 }
-
-func (c *backend1Conn) Holder() httpHolder { return c.node }
 
 func (c *backend1Conn) isAlive() bool {
 	return c.expireTime.IsZero() || time.Now().Before(c.expireTime)

@@ -129,12 +129,11 @@ func (g *http3Gate) justClose(quicConn *gotcp2.Conn) {
 // server3Conn is the server-side HTTP/3 connection.
 type server3Conn struct {
 	// Parent
-	http3Conn_[*server3Stream]
+	http3Conn_[*http3Gate, *server3Stream]
 	// Mixins
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	gate *http3Gate // the gate to which the conn belongs
 	// Conn states (zeros)
 	_server3Conn0 // all values in this struct must be zero by default!
 }
@@ -160,16 +159,12 @@ func putServer3Conn(servConn *server3Conn) {
 
 func (c *server3Conn) onGet(id int64, gate *http3Gate, quicConn *gotcp2.Conn) {
 	c.http3Conn_.onGet(id, gate, quicConn)
-	c.gate = gate
 }
 func (c *server3Conn) onPut() {
 	c._server3Conn0 = _server3Conn0{}
 
-	c.gate = nil
 	c.http3Conn_.onPut()
 }
-
-func (c *server3Conn) Holder() httpHolder { return c.gate }
 
 func (c *server3Conn) serve() { // runner
 	// TODO
@@ -177,8 +172,8 @@ func (c *server3Conn) serve() { // runner
 
 func (c *server3Conn) closeConn() {
 	c.quicConn.Close()
-	c.gate.DecConcurrentConns()
-	c.gate.DecConn()
+	c.holder.DecConcurrentConns()
+	c.holder.DecConn()
 }
 
 // server3Stream is the server-side HTTP/3 stream.
