@@ -14,8 +14,11 @@ import (
 	"github.com/diogin/gorox/hemi/library/gotcp2"
 )
 
-// quixHolder is the interface for _quixHolder_.
+// quixHolder
 type quixHolder interface {
+	// Imports
+	holder
+	// Methods
 	MaxCumulativeStreamsPerConn() int32
 	MaxConcurrentStreamsPerConn() int32
 }
@@ -52,21 +55,23 @@ func (h *_quixHolder_) MaxConcurrentStreamsPerConn() int32 { return h.maxConcurr
 
 // quixConn collects shared methods between *QUIXConn and *QConn.
 type quixConn interface {
-	// TODO
+	ID() int64
+	Holder() quixHolder
+	UDSMode() bool
+	TLSMode() bool
+	MakeTempName(dst []byte, unixTime int64) int
+	markBroken()
+	isBroken() bool
 }
 
 // quixConn_ is a parent.
-type quixConn_ struct { // for QUIXConn and QConn
+type quixConn_[H quixHolder] struct { // for QUIXConn and QConn
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	id                   int64  // the conn id
-	stage                *Stage // current stage, for convenience
-	quicConn             *gotcp2.Conn
-	udsMode              bool  // for convenience
-	tlsMode              bool  // for convenience
-	maxCumulativeStreams int32 // how many streams are allowed on this connection?
-	maxConcurrentStreams int32 // how many concurrent streams are allowed on this connection?
+	id       int64        // the conn id
+	holder   H            // quixNode or quixGate
+	quicConn *gotcp2.Conn // the underlying conn
 	// Conn states (zeros)
 	counter           atomic.Int64 // can be used to generate a random number
 	lastRead          time.Time    // deadline of last read operation
@@ -76,17 +81,14 @@ type quixConn_ struct { // for QUIXConn and QConn
 	concurrentStreams atomic.Int32 // how many concurrent streams?
 }
 
-func (c *quixConn_) onGet(id int64, stage *Stage, quicConn *gotcp2.Conn, udsMode bool, tlsMode bool, maxCumulativeStreams int32, maxConcurrentStreams int32) {
+func (c *quixConn_[H]) onGet(id int64, holder H, quicConn *gotcp2.Conn) {
 	c.id = id
-	c.stage = stage
+	c.holder = holder
 	c.quicConn = quicConn
-	c.udsMode = udsMode
-	c.tlsMode = tlsMode
-	c.maxCumulativeStreams = maxCumulativeStreams
-	c.maxConcurrentStreams = maxConcurrentStreams
 }
-func (c *quixConn_) onPut() {
-	c.stage = nil
+func (c *quixConn_[H]) onPut() {
+	var null H // nil
+	c.holder = null
 	c.quicConn = nil
 	c.counter.Store(0)
 	c.lastRead = time.Time{}
@@ -96,15 +98,19 @@ func (c *quixConn_) onPut() {
 	c.concurrentStreams.Store(0)
 }
 
-func (c *quixConn_) UDSMode() bool { return c.udsMode }
-func (c *quixConn_) TLSMode() bool { return c.tlsMode }
+func (c *quixConn_[H]) ID() int64 { return c.id }
 
-func (c *quixConn_) MakeTempName(dst []byte, unixTime int64) int {
-	return makeTempName(dst, c.stage.ID(), unixTime, c.id, c.counter.Add(1))
+func (c *quixConn_[H]) Holder() quixHolder { return c.holder }
+
+func (c *quixConn_[H]) UDSMode() bool { return c.holder.UDSMode() }
+func (c *quixConn_[H]) TLSMode() bool { return c.holder.TLSMode() }
+
+func (c *quixConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
+	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
 
-func (c *quixConn_) markBroken()    { c.broken.Store(true) }
-func (c *quixConn_) isBroken() bool { return c.broken.Load() }
+func (c *quixConn_[H]) markBroken()    { c.broken.Store(true) }
+func (c *quixConn_[H]) isBroken() bool { return c.broken.Load() }
 
 // quixStream collects shared methods between *QUIXStream and *QStream.
 type quixStream interface {

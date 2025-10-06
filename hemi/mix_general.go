@@ -19,7 +19,7 @@ import (
 )
 
 // holder
-type holder interface { // for _holder_
+type holder interface {
 	Stage() *Stage
 	Address() string
 	UDSMode() bool

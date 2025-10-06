@@ -95,11 +95,10 @@ func (n *udpxNode) dial() (*UConn, error) {
 // UConn
 type UConn struct {
 	// Parent
-	udpxConn_
+	udpxConn_[*udpxNode]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	node *udpxNode // the node to which the connection belongs
 	// Conn states (zeros)
 }
 
@@ -121,13 +120,9 @@ func putUConn(conn *UConn) {
 }
 
 func (c *UConn) onGet(id int64, node *udpxNode, pktConn net.PacketConn, rawConn syscall.RawConn) {
-	c.udpxConn_.onGet(id, node.Stage(), pktConn, rawConn, node.UDSMode())
-
-	c.node = node
+	c.udpxConn_.onGet(id, node, pktConn, rawConn)
 }
 func (c *UConn) onPut() {
-	c.node = nil
-
 	c.udpxConn_.onPut()
 }
 

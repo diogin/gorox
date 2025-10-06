@@ -173,11 +173,10 @@ func (n *tcpxNode) _dialTCP() (*TConn, error) {
 // TConn is a backend-side connection to tcpxNode.
 type TConn struct {
 	// Parent
-	tcpxConn_
+	tcpxConn_[*tcpxNode]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	node *tcpxNode // the node to which the connection belongs
 	// Conn states (zeros)
 }
 
@@ -200,12 +199,8 @@ func putTConn(conn *TConn) {
 
 func (c *TConn) onGet(id int64, node *tcpxNode, netConn net.Conn, rawConn syscall.RawConn) {
 	c.tcpxConn_.onGet(id, node, netConn, rawConn)
-
-	c.node = node
 }
 func (c *TConn) onPut() {
-	c.node = nil
-
 	c.tcpxConn_.onPut()
 }
 
@@ -213,9 +208,9 @@ func (c *TConn) CloseRead() {
 	c._checkClose()
 }
 func (c *TConn) CloseWrite() {
-	if c.node.UDSMode() {
+	if c.UDSMode() {
 		c.netConn.(*net.UnixConn).CloseWrite()
-	} else if c.node.TLSMode() {
+	} else if c.TLSMode() {
 		c.netConn.(*tls.Conn).CloseWrite()
 	} else {
 		c.netConn.(*net.TCPConn).CloseWrite()
@@ -229,7 +224,7 @@ func (c *TConn) _checkClose() {
 }
 
 func (c *TConn) Close() error {
-	c.node.DecConn()
+	c.holder.DecConn()
 	netConn := c.netConn
 	putTConn(c)
 	return netConn.Close()

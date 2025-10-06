@@ -320,11 +320,10 @@ func (g *tcpxGate) justClose(netConn net.Conn) {
 // TCPXConn is a TCPX connection coming from TCPXRouter.
 type TCPXConn struct {
 	// Parent
-	tcpxConn_
+	tcpxConn_[*tcpxGate]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	gate *tcpxGate
 	// Conn states (zeros)
 }
 
@@ -347,12 +346,8 @@ func putTCPXConn(conn *TCPXConn) {
 
 func (c *TCPXConn) onGet(id int64, gate *tcpxGate, netConn net.Conn, rawConn syscall.RawConn) {
 	c.tcpxConn_.onGet(id, gate, netConn, rawConn)
-
-	c.gate = gate
 }
 func (c *TCPXConn) onPut() {
-	c.gate = nil
-
 	c.tcpxConn_.onPut()
 }
 
@@ -360,9 +355,9 @@ func (c *TCPXConn) CloseRead() {
 	c._checkClose()
 }
 func (c *TCPXConn) CloseWrite() {
-	if c.gate.UDSMode() {
+	if c.UDSMode() {
 		c.netConn.(*net.UnixConn).CloseWrite()
-	} else if c.gate.TLSMode() {
+	} else if c.TLSMode() {
 		c.netConn.(*tls.Conn).CloseWrite()
 	} else {
 		c.netConn.(*net.TCPConn).CloseWrite()
@@ -376,7 +371,7 @@ func (c *TCPXConn) _checkClose() {
 }
 
 func (c *TCPXConn) Close() {
-	c.gate.justClose(c.netConn)
+	c.holder.justClose(c.netConn)
 }
 
 func (c *TCPXConn) riskyVariable(varCode int16, varName string) (varValue []byte) {

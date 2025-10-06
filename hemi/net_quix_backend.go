@@ -103,11 +103,10 @@ func (n *quixNode) _dialTLS() (*QConn, error) {
 // QConn is a backend-side quix connection to quixNode.
 type QConn struct {
 	// Parent
-	quixConn_
+	quixConn_[*quixNode]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	node *quixNode // the node to which the connection belongs
 	// Conn states (zeros)
 }
 
@@ -129,17 +128,15 @@ func putQConn(conn *QConn) {
 }
 
 func (c *QConn) onGet(id int64, node *quixNode, quicConn *gotcp2.Conn) {
-	c.quixConn_.onGet(id, node.Stage(), quicConn, node.UDSMode(), node.TLSMode(), node.MaxCumulativeStreamsPerConn(), node.MaxConcurrentStreamsPerConn())
-
-	c.node = node
+	c.quixConn_.onGet(id, node, quicConn)
 }
 func (c *QConn) onPut() {
-	c.node = nil
-
 	c.quixConn_.onPut()
 }
 
-func (c *QConn) ranOut() bool { return c.cumulativeStreams.Add(1) > c.maxCumulativeStreams }
+func (c *QConn) ranOut() bool {
+	return c.cumulativeStreams.Add(1) > c.holder.MaxCumulativeStreamsPerConn()
+}
 func (c *QConn) DialStream() (*QStream, error) {
 	// Note: A QConn can be used concurrently, limited by maxConcurrentStreams.
 	// TODO: qStream.onUse()

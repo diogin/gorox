@@ -174,11 +174,10 @@ func (g *udpxGate) justClose(pktConn net.PacketConn) {
 // UDPXConn
 type UDPXConn struct {
 	// Parent
-	udpxConn_
+	udpxConn_[*udpxGate]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	gate *udpxGate
 	// Conn states (zeros)
 }
 
@@ -200,13 +199,9 @@ func putUDPXConn(conn *UDPXConn) {
 }
 
 func (c *UDPXConn) onGet(id int64, gate *udpxGate, pktConn net.PacketConn, rawConn syscall.RawConn) {
-	c.udpxConn_.onGet(id, gate.Stage(), pktConn, rawConn, gate.UDSMode())
-
-	c.gate = gate
+	c.udpxConn_.onGet(id, gate, pktConn, rawConn)
 }
 func (c *UDPXConn) onPut() {
-	c.gate = nil
-
 	c.udpxConn_.onPut()
 }
 

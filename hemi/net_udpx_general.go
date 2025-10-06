@@ -13,9 +13,11 @@ import (
 	"time"
 )
 
-// udpxHolder is the interface for _udpxHolder_.
+// udpxHolder
 type udpxHolder interface {
-	// TODO
+	// Imports
+	holder
+	// Methods
 }
 
 // _udpxHolder_ is a mixin.
@@ -31,18 +33,19 @@ func (h *_udpxHolder_) onPrepare(comp Component) {
 
 // udpxConn collects shared methods between *UDPXConn and *UConn.
 type udpxConn interface {
-	// TODO
+	ID() int64
+	Holder() udpxHolder
+	UDSMode() bool
 }
 
 // udpxConn_ is a parent.
-type udpxConn_ struct { // for UDPXConn and UConn
+type udpxConn_[H udpxHolder] struct { // for UDPXConn and UConn
 	// Conn states (stocks)
 	stockBuffer [256]byte // a (fake) buffer to workaround Go's conservative escape analysis
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	id      int64  // the conn id
-	stage   *Stage // current stage, for convenience
-	udsMode bool   // for convenience
+	id      int64 // the conn id
+	holder  H     // ...
 	pktConn net.PacketConn
 	rawConn syscall.RawConn // for syscall
 	// Conn states (zeros)
@@ -52,15 +55,15 @@ type udpxConn_ struct { // for UDPXConn and UConn
 	broken    atomic.Bool
 }
 
-func (c *udpxConn_) onGet(id int64, stage *Stage, pktConn net.PacketConn, rawConn syscall.RawConn, udsMode bool) {
+func (c *udpxConn_[H]) onGet(id int64, holder H, pktConn net.PacketConn, rawConn syscall.RawConn) {
 	c.id = id
-	c.stage = stage
+	c.holder = holder
 	c.pktConn = pktConn
 	c.rawConn = rawConn
-	c.udsMode = udsMode
 }
-func (c *udpxConn_) onPut() {
-	c.stage = nil
+func (c *udpxConn_[H]) onPut() {
+	var null H // nil
+	c.holder = null
 	c.pktConn = nil
 	c.rawConn = nil
 	c.counter.Store(0)
@@ -69,18 +72,18 @@ func (c *udpxConn_) onPut() {
 	c.broken.Store(false)
 }
 
-func (c *udpxConn_) UDSMode() bool { return c.udsMode }
+func (c *udpxConn_[H]) UDSMode() bool { return c.holder.UDSMode() }
 
-func (c *udpxConn_) MakeTempName(dst []byte, unixTime int64) int {
-	return makeTempName(dst, c.stage.ID(), unixTime, c.id, c.counter.Add(1))
+func (c *udpxConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
+	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
 
-func (c *udpxConn_) markBroken()    { c.broken.Store(true) }
-func (c *udpxConn_) isBroken() bool { return c.broken.Load() }
+func (c *udpxConn_[H]) markBroken()    { c.broken.Store(true) }
+func (c *udpxConn_[H]) isBroken() bool { return c.broken.Load() }
 
-func (c *udpxConn_) WriteTo(src []byte, addr net.Addr) (n int, err error) {
+func (c *udpxConn_[H]) WriteTo(src []byte, addr net.Addr) (n int, err error) {
 	return c.pktConn.WriteTo(src, addr)
 }
-func (c *udpxConn_) ReadFrom(dst []byte) (n int, addr net.Addr, err error) {
+func (c *udpxConn_[H]) ReadFrom(dst []byte) (n int, addr net.Addr, err error) {
 	return c.pktConn.ReadFrom(dst)
 }

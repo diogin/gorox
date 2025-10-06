@@ -199,11 +199,10 @@ func (g *quixGate) justClose(quicConn *gotcp2.Conn) {
 // QUIXConn is a QUIX connection coming from QUIXRouter.
 type QUIXConn struct {
 	// Parent
-	quixConn_
+	quixConn_[*quixGate]
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	gate *quixGate
 	// Conn states (zeros)
 }
 
@@ -225,13 +224,9 @@ func putQUIXConn(conn *QUIXConn) {
 }
 
 func (c *QUIXConn) onGet(id int64, gate *quixGate, quicConn *gotcp2.Conn) {
-	c.quixConn_.onGet(id, gate.Stage(), quicConn, gate.UDSMode(), gate.TLSMode(), gate.MaxCumulativeStreamsPerConn(), gate.MaxConcurrentStreamsPerConn())
-
-	c.gate = gate
+	c.quixConn_.onGet(id, gate, quicConn)
 }
 func (c *QUIXConn) onPut() {
-	c.gate = nil
-
 	c.quixConn_.onPut()
 }
 

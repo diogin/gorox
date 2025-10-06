@@ -21,7 +21,7 @@ import (
 )
 
 // httpHolder
-type httpHolder interface { // for _httpHolder_
+type httpHolder interface {
 	// Imports
 	holder
 	contentSaver
@@ -115,8 +115,8 @@ func (c *httpConn_[H]) isBroken() bool { return c.broken.Load() }
 
 // httpStream
 type httpStream interface { // for *http[1-3]Stream
-	Holder() httpHolder
 	ID() int64
+	Holder() httpHolder
 	UDSMode() bool
 	TLSMode() bool
 	MakeTempName(dst []byte, unixTime int64) int
