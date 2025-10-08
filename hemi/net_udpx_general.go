@@ -21,7 +21,7 @@ type udpxHolder interface {
 }
 
 // _udpxHolder_ is a mixin.
-type _udpxHolder_ struct { // for udpxNode, UDPXRouter, and UDPXGate
+type _udpxHolder_ struct { // for udpxNode, UDPXRouter, and udpxGate
 	// States
 	// UDP_CORK, UDP_GSO, ...
 }
@@ -45,7 +45,7 @@ type udpxConn_[H udpxHolder] struct { // for UDPXConn and UConn
 	// Conn states (controlled)
 	// Conn states (non-zeros)
 	id      int64 // the conn id
-	holder  H     // ...
+	holder  H     // udpxNode or udpxGate
 	pktConn net.PacketConn
 	rawConn syscall.RawConn // for syscall
 	// Conn states (zeros)
