@@ -9,6 +9,7 @@ package hemi
 import (
 	"bytes"
 	"errors"
+	"io"
 	"time"
 )
 
@@ -46,21 +47,22 @@ type HTTPNode interface { // for *http[1-3]Node
 }
 
 // httpNode_ is a parent.
-type httpNode_[B HTTPBackend] struct { // for http[1-3]Node
+type httpNode_[B HTTPBackend, C io.Closer] struct { // for http[1-3]Node
 	// Parent
 	Node_[B]
 	// Mixins
 	_httpHolder_ // holds conns
 	// States
+	backConns      connPool[C]   // free list of conns in this node
 	keepAliveConns int32         // max conns to keep alive
 	idleTimeout    time.Duration // conn idle timeout
 }
 
-func (n *httpNode_[B]) onCreate(compName string, stage *Stage, backend B) {
+func (n *httpNode_[B, C]) onCreate(compName string, stage *Stage, backend B) {
 	n.Node_.OnCreate(compName, stage, backend)
 }
 
-func (n *httpNode_[B]) onConfigure() {
+func (n *httpNode_[B, C]) onConfigure() {
 	n.Node_.OnConfigure()
 	n._httpHolder_.onConfigure(n, 0*time.Second, 0*time.Second, TmpDir()+"/web/backends/"+n.backend.CompName()+"/"+n.compName)
 
@@ -80,20 +82,14 @@ func (n *httpNode_[B]) onConfigure() {
 		return errors.New(".idleTimeout has an invalid value")
 	}, 2*time.Second)
 }
-func (n *httpNode_[B]) onPrepare() {
+func (n *httpNode_[B, C]) onPrepare() {
 	n.Node_.OnPrepare()
 	n._httpHolder_.onPrepare(n, 0755)
 }
 
-// BackendStream is the backend-side http stream.
-type BackendStream interface { // for *backend[1-3]Stream
-	Response() BackendResponse
-	Request() BackendRequest
-	Socket() BackendSocket
-
-	isBroken() bool
-	markBroken()
-}
+func (n *httpNode_[B, C]) pullConn() C     { return n.backConns.pullConn() }
+func (n *httpNode_[B, C]) pushConn(conn C) { n.backConns.pushConn(conn) }
+func (n *httpNode_[B, C]) closeIdle() int  { return n.backConns.closeIdle() }
 
 // BackendResponse is the backend-side http response.
 type BackendResponse interface { // for *backend[1-3]Response

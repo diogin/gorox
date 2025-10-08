@@ -50,9 +50,8 @@ func (b *HTTP1Backend) ReleaseStream(backStream BackendStream) {
 // http1Node is a node in HTTP1Backend.
 type http1Node struct {
 	// Parent
-	httpNode_[*HTTP1Backend]
+	httpNode_[*HTTP1Backend, *backend1Conn]
 	// States
-	backConns connPool[*backend1Conn] // free list of conns in this node
 }
 
 func (n *http1Node) onCreate(compName string, stage *Stage, backend *HTTP1Backend) {
@@ -190,10 +189,6 @@ func (n *http1Node) storeStream(backStream *backend1Stream) {
 		n.DecConn()
 	}
 }
-
-func (n *http1Node) pullConn() *backend1Conn     { return n.backConns.pullConn() }
-func (n *http1Node) pushConn(conn *backend1Conn) { n.backConns.pushConn(conn) }
-func (n *http1Node) closeIdle() int              { return n.backConns.closeIdle() }
 
 // backend1Conn is the backend-side HTTP/1.x connection.
 type backend1Conn struct {

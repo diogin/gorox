@@ -335,3 +335,13 @@ func SOCKReverseProxy(servReq ServerRequest, servSock ServerSocket, backend HTTP
 	// TODO
 	servSock.Close()
 }
+
+// BackendStream is the backend-side http stream.
+type BackendStream interface { // for *backend[1-3]Stream
+	Response() BackendResponse
+	Request() BackendRequest
+	Socket() BackendSocket
+
+	isBroken() bool
+	markBroken()
+}

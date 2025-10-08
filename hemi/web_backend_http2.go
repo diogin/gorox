@@ -46,9 +46,8 @@ func (b *HTTP2Backend) ReleaseStream(backStream BackendStream) {
 // http2Node
 type http2Node struct {
 	// Parent
-	httpNode_[*HTTP2Backend]
+	httpNode_[*HTTP2Backend, *backend2Conn]
 	// States
-	backConns connPool[*backend2Conn] // free list of conns in this node
 }
 
 func (n *http2Node) onCreate(compName string, stage *Stage, backend *HTTP2Backend) {
@@ -98,10 +97,6 @@ func (n *http2Node) storeStream(backStream *backend2Stream) {
 	// Note: A backend2Conn can be used concurrently, limited by maxConcurrentStreams.
 	// TODO
 }
-
-func (n *http2Node) pullConn() *backend2Conn     { return n.backConns.pullConn() }
-func (n *http2Node) pushConn(conn *backend2Conn) { n.backConns.pushConn(conn) }
-func (n *http2Node) closeIdle() int              { return n.backConns.closeIdle() }
 
 // backend2Conn is the backend-side HTTP/2 connection.
 type backend2Conn struct {
