@@ -135,9 +135,6 @@ type server3Conn struct {
 	// Conn states (controlled)
 	// Conn states (non-zeros)
 	// Conn states (zeros)
-	_server3Conn0 // all values in this struct must be zero by default!
-}
-type _server3Conn0 struct { // for fast reset, entirely
 }
 
 var poolServer3Conn sync.Pool
@@ -161,8 +158,6 @@ func (c *server3Conn) onGet(id int64, gate *http3Gate, quicConn *gotcp2.Conn) {
 	c.http3Conn_.onGet(id, gate, quicConn)
 }
 func (c *server3Conn) onPut() {
-	c._server3Conn0 = _server3Conn0{}
-
 	c.http3Conn_.onPut()
 }
 
@@ -189,12 +184,6 @@ type server3Stream struct {
 	// Stream states (controlled)
 	// Stream states (non-zeros)
 	// Stream states (zeros)
-	_server3Stream0 // all values in this struct must be zero by default!
-}
-type _server3Stream0 struct { // for fast reset, entirely
-	position uint8
-	state    uint8
-	reset    bool
 }
 
 var poolServer3Stream sync.Pool
@@ -233,7 +222,6 @@ func (s *server3Stream) onEnd() { // for zeros
 		s.socket.onEnd()
 		s.socket = nil
 	}
-	s._server3Stream0 = _server3Stream0{}
 
 	s.http3Stream_.onEnd()
 }

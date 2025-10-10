@@ -294,12 +294,6 @@ type server2Conn struct {
 	// Conn states (controlled)
 	// Conn states (non-zeros)
 	// Conn states (zeros)
-	_server2Conn0 // all values in this struct must be zero by default!
-}
-type _server2Conn0 struct { // for fast reset, entirely
-	waitReceive bool // ...
-	//unackedSettings?
-	//queuedControlFrames?
 }
 
 var poolServer2Conn sync.Pool
@@ -323,8 +317,6 @@ func (c *server2Conn) onGet(id int64, gate *httpxGate, netConn net.Conn, rawConn
 	c.http2Conn_.onGet(id, gate, netConn, rawConn)
 }
 func (c *server2Conn) onPut() {
-	c._server2Conn0 = _server2Conn0{}
-
 	c.http2Conn_.onPut()
 }
 
@@ -563,9 +555,6 @@ type server2Stream struct {
 	// Stream states (controlled)
 	// Stream states (non-zeros)
 	// Stream states (zeros)
-	_server2Stream0 // all values in this struct must be zero by default!
-}
-type _server2Stream0 struct { // for fast reset, entirely
 }
 
 var poolServer2Stream sync.Pool
@@ -606,7 +595,6 @@ func (s *server2Stream) onEnd() { // for zeros
 		s.socket.onEnd()
 		s.socket = nil
 	}
-	s._server2Stream0 = _server2Stream0{}
 
 	s.http2Stream_.onEnd()
 }

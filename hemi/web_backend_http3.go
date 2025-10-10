@@ -103,9 +103,6 @@ type backend3Conn struct {
 	expireTime time.Time // when the conn is considered expired
 	// Conn states (non-zeros)
 	// Conn states (zeros)
-	_backend3Conn0 // all values in this struct must be zero by default!
-}
-type _backend3Conn0 struct { // for fast reset, entirely
 }
 
 var poolBackend3Conn sync.Pool
@@ -129,8 +126,6 @@ func (c *backend3Conn) onGet(id int64, node *http3Node, quicConn *gotcp2.Conn) {
 	c.http3Conn_.onGet(id, node, quicConn)
 }
 func (c *backend3Conn) onPut() {
-	c._backend3Conn0 = _backend3Conn0{}
-
 	c.expireTime = time.Time{}
 	c.http3Conn_.onPut()
 }
@@ -169,9 +164,6 @@ type backend3Stream struct {
 	// Stream states (controlled)
 	// Stream states (non-zeros)
 	// Stream states (zeros)
-	_backend3Stream0 // all values in this struct must be zero by default!
-}
-type _backend3Stream0 struct { // for fast reset, entirely
 }
 
 var poolBackend3Stream sync.Pool
@@ -210,7 +202,6 @@ func (s *backend3Stream) onEnd() { // for zeros
 		s.socket.onEnd()
 		s.socket = nil
 	}
-	s._backend3Stream0 = _backend3Stream0{}
 
 	s.http3Stream_.onEnd()
 }

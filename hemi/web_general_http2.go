@@ -69,11 +69,14 @@ type _http2Conn0 struct { // for fast reset, entirely
 	concurrentStreams  uint8  // num of active streams
 	acknowledged       bool   // server settings acknowledged by client?
 	pingSent           bool   // is there a ping frame sent and waiting for response?
-	inBufferEdge       uint16 // incoming data ends at c.inBuffer.buf[c.inBufferEdge]
-	sectBack           uint16 // incoming frame section (header or payload) begins from c.inBuffer.buf[c.sectBack]
-	sectFore           uint16 // incoming frame section (header or payload) ends at c.inBuffer.buf[c.sectFore]
-	contBack           uint16 // incoming continuation part (header or payload) begins from c.inBuffer.buf[c.contBack]
-	contFore           uint16 // incoming continuation part (header or payload) ends at c.inBuffer.buf[c.contFore]
+	waitReceive        bool   // ...
+	//unackedSettings?
+	//queuedControlFrames?
+	inBufferEdge uint16 // incoming data ends at c.inBuffer.buf[c.inBufferEdge]
+	sectBack     uint16 // incoming frame section (header or payload) begins from c.inBuffer.buf[c.sectBack]
+	sectFore     uint16 // incoming frame section (header or payload) ends at c.inBuffer.buf[c.sectFore]
+	contBack     uint16 // incoming continuation part (header or payload) begins from c.inBuffer.buf[c.contBack]
+	contFore     uint16 // incoming continuation part (header or payload) ends at c.inBuffer.buf[c.contFore]
 }
 
 func (c *http2Conn_[H, S]) onGet(id int64, holder H, netConn net.Conn, rawConn syscall.RawConn) {
@@ -848,7 +851,7 @@ func (s *_http2Socket_) todo2() {
 const ( // HTTP/2 sizes and limits for both of our HTTP/2 server and HTTP/2 backend
 	http2MaxFrameSize         = _16K // currently hardcoded. must <= _64K1 - 9
 	http2MaxTableSize         = _4K  // currently hardcoded
-	http2MaxConcurrentStreams = 127  // currently hardcoded
+	http2MaxConcurrentStreams = 127  // currently hardcoded. don't change this
 )
 
 const ( // HTTP/2 frame kinds
