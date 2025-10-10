@@ -196,7 +196,6 @@ type backend1Conn struct {
 	http1Conn_[*http1Node]
 	// Mixins
 	// Assocs
-	next   *backend1Conn  // the linked-list
 	stream backend1Stream // an http/1.x connection has exactly one stream
 	// Conn states (stocks)
 	// Conn states (controlled)

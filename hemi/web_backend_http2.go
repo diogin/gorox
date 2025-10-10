@@ -104,7 +104,6 @@ type backend2Conn struct {
 	http2Conn_[*http2Node, *backend2Stream]
 	// Mixins
 	// Assocs
-	next *backend2Conn // the linked-list
 	// Conn states (stocks)
 	// Conn states (controlled)
 	expireTime time.Time // when the conn is considered expired

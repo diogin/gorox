@@ -97,7 +97,6 @@ type backend3Conn struct {
 	http3Conn_[*http3Node, *backend3Stream]
 	// Mixins
 	// Assocs
-	next *backend3Conn // the linked-list
 	// Conn states (stocks)
 	// Conn states (controlled)
 	expireTime time.Time // when the conn is considered expired

@@ -423,7 +423,6 @@ func (n *fcgiNode) closeIdle() int          { return n.backConns.closeIdle() }
 // fcgiConn is a connection to an FCGI node.
 type fcgiConn struct {
 	// Assocs
-	next   *fcgiConn  // the linked-list
 	exchan fcgiExchan // an fcgi connection has exactly one stream. currently we don't support multiplex
 	// Conn states (stocks)
 	// Conn states (controlled)

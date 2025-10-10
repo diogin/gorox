@@ -52,7 +52,7 @@ type udpxConn_[H udpxHolder] struct { // for UDPXConn and UConn
 	counter   atomic.Int64 // can be used to generate a random number
 	lastRead  time.Time    // deadline of last read operation
 	lastWrite time.Time    // deadline of last write operation
-	broken    atomic.Bool
+	broken    atomic.Bool  // is connection broken?
 }
 
 func (c *udpxConn_[H]) onGet(id int64, holder H, pktConn net.PacketConn, rawConn syscall.RawConn) {
