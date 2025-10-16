@@ -1688,6 +1688,8 @@ var ( // fcgi request errors
 	fcgiWriteBroken   = errors.New("fcgi: write broken")
 )
 
+////////////////////////////////////////////////////////////////
+
 // FCGI Record = FCGI Header(8) + payload[65535] + padding[255]
 // FCGI Header = version(1) + type(1) + requestId(2) + payloadLen(2) + paddingLen(1) + reserved(1)
 

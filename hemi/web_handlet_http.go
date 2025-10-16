@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// BackendStream is the backend-side http stream.
+type BackendStream interface { // for *backend[1-3]Stream
+	Response() BackendResponse
+	Request() BackendRequest
+	Socket() BackendSocket
+
+	isBroken() bool
+	markBroken()
+}
+
 func init() {
 	RegisterHandlet("httpProxy", func(compName string, stage *Stage, webapp *Webapp) Handlet {
 		h := new(httpProxy)
@@ -334,14 +344,4 @@ type SOCKProxyConfig struct {
 func SOCKReverseProxy(servReq ServerRequest, servSock ServerSocket, backend HTTPBackend, proxyConfig *SOCKProxyConfig) {
 	// TODO
 	servSock.Close()
-}
-
-// BackendStream is the backend-side http stream.
-type BackendStream interface { // for *backend[1-3]Stream
-	Response() BackendResponse
-	Request() BackendRequest
-	Socket() BackendSocket
-
-	isBroken() bool
-	markBroken()
 }

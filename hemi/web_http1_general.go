@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// HTTP/1.x types and protocol elements. See RFC 9112 and RFC 6455.
+// HTTP/1.x general implementation. See RFC 9112 and RFC 6455.
 
 package hemi
 
