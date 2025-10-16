@@ -28,6 +28,7 @@ type httpHolder interface {
 	holder
 	contentSaver
 	// Methods
+	MaxCumulativeStreamsPerConn() int32
 	MaxMemoryContentSize() int32 // allowed to load into memory
 }
 
@@ -63,7 +64,8 @@ func (h *_httpHolder_) onPrepare(comp Component, perm os.FileMode) {
 	h._contentSaver_.onPrepare(comp, perm)
 }
 
-func (h *_httpHolder_) MaxMemoryContentSize() int32 { return h.maxMemoryContentSize }
+func (h *_httpHolder_) MaxCumulativeStreamsPerConn() int32 { return h.maxCumulativeStreamsPerConn }
+func (h *_httpHolder_) MaxMemoryContentSize() int32        { return h.maxMemoryContentSize }
 
 // httpConn
 type httpConn interface { // for *http[1-3]Conn
@@ -191,7 +193,7 @@ type _httpIn_ struct { // for backendResponse_ and serverRequest_. incoming mess
 	stockPrimes [40]pair   // for r.primes. 960B
 	stockExtras [30]pair   // for r.extras. 720B
 	// Stream states (controlled)
-	inputNext      int32    // HTTP/1.x request only. next request begins from r.input[r.inputNext]. exists because HTTP/1.1 supports pipelining
+	inputNext      int32    // HTTP/1 request only. next request begins from r.input[r.inputNext]. exists because HTTP/1.1 supports pipelining
 	inputEdge      int32    // edge position of current message head is at r.input[r.inputEdge]. placed here to make it compatible with HTTP/1.1 pipelining
 	mainPair       pair     // to overcome the limitation of Go's escape analysis when receiving incoming pairs
 	contentCodings [4]uint8 // known content-encoding flags, controlled by r.numContentCodings. see httpCodingXXX for values
@@ -214,7 +216,7 @@ type _httpIn_ struct { // for backendResponse_ and serverRequest_. incoming mess
 	bodyResult           int16         // result of receiving message body. values are as same as http status for convenience
 	// Stream states (zeros)
 	failReason  string    // the fail reason of headResult or bodyResult
-	bodyWindow  []byte    // a window used for receiving body. for HTTP/1.x, sizes must be same with r.input. [HTTP/1.x=<none>/16K, HTTP/2/3=<none>/4K/16K/64K1]
+	bodyWindow  []byte    // a window used for receiving body. for HTTP/1, sizes must be same with r.input. [HTTP/1=<none>/16K, HTTP/2/3=<none>/4K/16K/64K1]
 	bodyTime    time.Time // the time when first body read operation is performed on this stream
 	contentText []byte    // if loadable, the received and loaded content of current message is at r.contentText[:r.receivedSize]. [<none>/r.input/4K/16K/64K1/(make)]
 	contentFile *os.File  // used by r.proxyTakeContent(), if content is tempFile. will be closed on stream ends
@@ -224,7 +226,7 @@ type _httpIn0 struct { // for fast reset, entirely
 	elemBack          int32   // element begins from. for parsing elements in control & headerLines & content & trailerLines
 	elemFore          int32   // element spanning to. for parsing elements in control & headerLines & content & trailerLines
 	head              span    // head (control data + header section) of current message -> r.input. set after head is received. only for debugging
-	imme              span    // HTTP/1.x only. immediate data after current message head is at r.input[r.imme.from:r.imme.edge]
+	imme              span    // HTTP/1 only. immediate data after current message head is at r.input[r.imme.from:r.imme.edge]
 	hasExtra          [8]bool // has extra pairs? see pairXXX for indexes
 	dateTime          int64   // parsed unix time of the date header field
 	arrayEdge         int32   // next usable position of r.array begins from r.array[r.arrayEdge]. used when writing r.array
@@ -270,7 +272,7 @@ type _httpIn0 struct { // for fast reset, entirely
 func (r *_httpIn_) onUse(httpVersion uint8, asResponse bool) { // for non-zeros
 	if httpVersion >= Version2 || asResponse { // we don't use http/1.1 request pipelining in the backend side.
 		r.input = r.stockInput[:]
-	} else { // must be http/1.x server side.
+	} else { // must be http/1 server side.
 		// HTTP/1.1 servers support request pipelining, so input related are not set here.
 	}
 	r.array = r.stockArray[:]
@@ -294,7 +296,7 @@ func (r *_httpIn_) onEnd() { // for zeros
 		}
 		r.input = nil
 		r.inputNext, r.inputEdge = 0, 0
-	} else { // must be http/1.x server side.
+	} else { // must be http/1 server side.
 		// HTTP/1.1 servers support request pipelining, so input related are not reset here.
 	}
 	if r.arrayKind == arrayKindPool {
@@ -3946,7 +3948,7 @@ func (r *serverRequest_) _loadURLEncodedForm() { // into memory entirely
 		return
 	}
 	var (
-		state = 2 // to be consistent with HTTP/1.x
+		state = 2 // to be consistent with HTTP/1
 		octet byte
 	)
 	form := &r.mainPair
@@ -4790,7 +4792,7 @@ func (r *serverResponse_) SetStatus(status int16) error {
 	}
 }
 func (r *serverResponse_) Status() int16 { return r.status }
-func (r *serverResponse_) controlData() []byte { // used by http/2 and http/3. http/1.x overrides this!
+func (r *serverResponse_) controlData() []byte { // used by http/2 and http/3. http/1 overrides this!
 	start := r.start[:len(httpStatus)]
 	if r.status < int16(len(http1Controls)) && http1Controls[r.status] != nil {
 		control := http1Controls[r.status]
@@ -5691,7 +5693,7 @@ func (r *backendResponse_) applyTrailerLine(lineIndex uint8) bool {
 type BackendRequest interface { // for *backend[1-3]Request
 	proxySetMethodURI(method []byte, uri []byte, hasContent bool) bool
 	proxySetAuthority(hostname []byte, colonport []byte) bool
-	proxyCopyCookies(servReq ServerRequest) bool // NOTE: HTTP 1.x/2/3 have different requirements on the "cookie" header field
+	proxyCopyCookies(servReq ServerRequest) bool // NOTE: HTTP 1/2/3 have different requirements on the "cookie" header field
 	proxyCopyHeaderLines(servReq ServerRequest, proxyConfig *HTTPProxyConfig) bool
 	proxyPassMessage(servReq ServerRequest) error                 // pass content to backend directly
 	proxyPostMessage(foreContent any, foreHasTrailers bool) error // post held content to backend
@@ -5740,7 +5742,7 @@ func (r *backendRequest_) onEnd() { // for zeros
 
 func (r *backendRequest_) Response() BackendResponse { return r.response }
 
-func (r *backendRequest_) setScheme(scheme []byte) bool { // used by http/2 and http/3 only. http/1.x doesn't use this!
+func (r *backendRequest_) setScheme(scheme []byte) bool { // used by http/2 and http/3 only. http/1 doesn't use this!
 	// TODO: copy `:scheme $scheme` to r.output
 	return false
 }
@@ -5893,7 +5895,7 @@ func (r *backendRequest_) proxyCopyHeaderLines(servReq ServerRequest, proxyConfi
 			return false
 		}
 	} else {
-		// we have no way to set scheme in HTTP/1.x unless we use absolute-form, which is a risk as some servers may not support it.
+		// we have no way to set scheme in HTTP/1 unless we use absolute-form, which is a risk as some servers may not support it.
 	}
 
 	// Copy selective forbidden header fields (including cookie) from servReq

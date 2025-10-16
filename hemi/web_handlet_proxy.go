@@ -228,7 +228,7 @@ func HTTPReverseProxy(servReq ServerRequest, servResp ServerResponse, hcache Hca
 			return
 		}
 		if backResp.Status() >= StatusOK {
-			if !backResp.KeepAlive() { // connection close. only HTTP/1.x uses this. TODO: what if the connection is closed remotely?
+			if !backResp.KeepAlive() { // connection close. only HTTP/1 uses this. TODO: what if the connection is closed remotely?
 				backStream.(*backend1Stream).conn.persistent = false // backend told us to not keep the connection alive
 			}
 			break

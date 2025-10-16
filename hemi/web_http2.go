@@ -865,18 +865,18 @@ func init() {
 	})
 }
 
-// httpxServer is the HTTP/1.x and HTTP/2 server. An httpxServer has many httpxGates.
+// httpxServer is the HTTP/1 and HTTP/2 server. An httpxServer has many httpxGates.
 type httpxServer struct {
 	// Parent
 	httpServer_[*httpxGate]
 	// States
-	httpMode int8 // 0: adaptive, 1: http/1.x, 2: http/2
+	httpMode int8 // 0: adaptive, 1: http/1, 2: http/2
 }
 
 func (s *httpxServer) onCreate(compName string, stage *Stage) {
 	s.httpServer_.onCreate(compName, stage)
 
-	s.httpMode = 1 // http/1.x by default. TODO(diogin): change to adaptive mode after http/2 server has been fully implemented
+	s.httpMode = 1 // http/1 by default. TODO(diogin): change to adaptive mode after http/2 server has been fully implemented
 }
 
 func (s *httpxServer) OnConfigure() {
@@ -888,14 +888,14 @@ func (s *httpxServer) OnConfigure() {
 		s.ConfigureString("httpMode", &mode, func(value string) error {
 			value = strings.ToLower(value)
 			switch value {
-			case "http1", "http/1", "http/1.x", "http2", "http/2", "adaptive":
+			case "http1", "http/1", "http2", "http/2", "adaptive":
 				return nil
 			default:
 				return errors.New(".httpMode has an invalid value")
 			}
 		}, "adaptive")
 		switch mode {
-		case "http1", "http/1", "http/1.x":
+		case "http1", "http/1":
 			s.httpMode = 1
 		case "http2", "http/2":
 			s.httpMode = 2
@@ -1238,7 +1238,7 @@ serve:
 				} else { // processor i/o error
 					c.goawayCloseConn(http2ErrorInternal)
 				}
-				// c.manage() was broken, but c.receive() was not. need wait
+				// c.manage() was broken, but c.receive() was not. needs wait
 				c.waitReceive = true
 			} else { // got an error from c.receive(), it must be broken and quit.
 				if h2e, ok := incoming.(http2Error); ok {
