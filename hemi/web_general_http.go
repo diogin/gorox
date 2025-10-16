@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-// httpHolder
+// httpHolder holds httpConns.
 type httpHolder interface {
 	// Imports
 	holder
@@ -2103,6 +2103,8 @@ func (s *_httpSocket_) todo() {
 var ( // _httpSocket_ errors
 	httpSocketWriteBroken = errors.New("write broken")
 )
+
+////////////////////////////////////////////////////////////////
 
 const ( // basic http constants
 	// version codes

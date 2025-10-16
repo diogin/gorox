@@ -231,7 +231,7 @@ func (g *tcpxGate) serveUDS() {
 			continue
 		}
 		conn := getTCPXConn(connID, g, udsConn, rawConn)
-		go g.server.serveConn(conn) // conn is put to pool in serveConn()
+		go g.server.serveConn(conn) // conn will be put to pool in serveConn()
 		connID++
 	}
 	g.WaitConns() // TODO: max timeout?
@@ -265,7 +265,7 @@ func (g *tcpxGate) serveTLS() {
 			continue
 		}
 		conn := getTCPXConn(connID, g, tlsConn, nil)
-		go g.server.serveConn(conn) // conn is put to pool in serveConn()
+		go g.server.serveConn(conn) // conn will be put to pool in serveConn()
 		connID++
 	}
 	g.WaitConns() // TODO: max timeout?
@@ -301,7 +301,7 @@ func (g *tcpxGate) serveTCP() {
 		if DebugLevel() >= 2 {
 			Printf("%+v\n", conn)
 		}
-		go g.server.serveConn(conn) // conn is put to pool in serveConn()
+		go g.server.serveConn(conn) // conn will be put to pool in serveConn()
 		connID++
 	}
 	g.WaitConns() // TODO: max timeout?

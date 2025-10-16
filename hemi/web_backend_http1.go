@@ -193,7 +193,7 @@ func (n *http1Node) storeStream(backStream *backend1Stream) {
 // backend1Conn is the backend-side HTTP/1.x connection.
 type backend1Conn struct {
 	// Parent
-	http1Conn_[*http1Node]
+	http1Conn_[*http1Node, *backend1Stream]
 	// Mixins
 	// Assocs
 	stream backend1Stream // an http/1.x connection has exactly one stream

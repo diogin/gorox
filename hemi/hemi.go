@@ -812,7 +812,7 @@ func (s *Stage) Start(id int32) {
 
 	// Start all components in current stage
 	s.startFixtures() // go fixture.run()
-	s.startBackends() // go backend.maintain()
+	s.startBackends() // go backend.Maintain()
 	s.startServices() // go service.maintain()
 	s.startHstates()  // go hstate.Maintain()
 	s.startHcaches()  // go hcache.Maintain()

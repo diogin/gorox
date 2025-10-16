@@ -848,6 +848,8 @@ func (s *_http2Socket_) todo2() {
 	s.todo()
 }
 
+////////////////////////////////////////////////////////////////
+
 const ( // HTTP/2 sizes and limits for both of our HTTP/2 server and HTTP/2 backend
 	http2MaxFrameSize         = _16K // currently hardcoded. must <= _64K1 - 9
 	http2MaxTableSize         = _4K  // currently hardcoded

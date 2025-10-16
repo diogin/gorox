@@ -187,10 +187,10 @@ func (g *httpxGate) serveUDS() {
 		}
 		if g.server.httpMode == 2 {
 			servConn := getServer2Conn(connID, g, udsConn, rawConn)
-			go servConn.manage() // servConn is put to pool in manage()
+			go servConn.manage() // servConn will be put to pool in manage()
 		} else {
 			servConn := getServer1Conn(connID, g, udsConn, rawConn)
-			go servConn.serve() // servConn is put to pool in serve()
+			go servConn.serve() // servConn will be put to pool in serve()
 		}
 		connID++
 	}
@@ -226,10 +226,10 @@ func (g *httpxGate) serveTLS() {
 		}
 		if connState := tlsConn.ConnectionState(); connState.NegotiatedProtocol == "h2" {
 			servConn := getServer2Conn(connID, g, tlsConn, nil)
-			go servConn.manage() // servConn is put to pool in manage()
+			go servConn.manage() // servConn will be put to pool in manage()
 		} else {
 			servConn := getServer1Conn(connID, g, tlsConn, nil)
-			go servConn.serve() // servConn is put to pool in serve()
+			go servConn.serve() // servConn will be put to pool in serve()
 		}
 		connID++
 	}
@@ -265,10 +265,10 @@ func (g *httpxGate) serveTCP() {
 		}
 		if g.server.httpMode == 2 {
 			servConn := getServer2Conn(connID, g, tcpConn, rawConn)
-			go servConn.manage() // servConn is put to pool in manage()
+			go servConn.manage() // servConn will be put to pool in manage()
 		} else {
 			servConn := getServer1Conn(connID, g, tcpConn, rawConn)
-			go servConn.serve() // servConn is put to pool in serve()
+			go servConn.serve() // servConn will be put to pool in serve()
 		}
 		connID++
 	}

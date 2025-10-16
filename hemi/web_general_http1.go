@@ -28,7 +28,7 @@ type http1Conn interface { // for *backend1Conn and *server1Conn
 }
 
 // http1Conn_ is a parent.
-type http1Conn_[H httpHolder] struct { // for backend1Conn and server1Conn
+type http1Conn_[H httpHolder, S http1Stream] struct { // for backend1Conn and server1Conn
 	// Parent
 	httpConn_[H]
 	// Conn states (stocks)
@@ -43,14 +43,14 @@ type http1Conn_[H httpHolder] struct { // for backend1Conn and server1Conn
 	lastRead  time.Time // deadline of last read operation
 }
 
-func (c *http1Conn_[H]) onGet(id int64, holder H, netConn net.Conn, rawConn syscall.RawConn) {
+func (c *http1Conn_[H, S]) onGet(id int64, holder H, netConn net.Conn, rawConn syscall.RawConn) {
 	c.httpConn_.onGet(id, holder)
 
 	c.netConn = netConn
 	c.rawConn = rawConn
 	c.persistent = true
 }
-func (c *http1Conn_[H]) onPut() {
+func (c *http1Conn_[H, S]) onPut() {
 	c.netConn = nil
 	c.rawConn = nil
 	c.streamID = 0
@@ -60,14 +60,14 @@ func (c *http1Conn_[H]) onPut() {
 	c.httpConn_.onPut()
 }
 
-func (c *http1Conn_[H]) nextStreamID() int64 {
+func (c *http1Conn_[H, S]) nextStreamID() int64 {
 	c.streamID++
 	return c.streamID
 }
 
-func (c *http1Conn_[H]) remoteAddr() net.Addr { return c.netConn.RemoteAddr() }
+func (c *http1Conn_[H, S]) remoteAddr() net.Addr { return c.netConn.RemoteAddr() }
 
-func (c *http1Conn_[H]) setReadDeadline() error {
+func (c *http1Conn_[H, S]) setReadDeadline() error {
 	if deadline := time.Now().Add(c.holder.ReadTimeout()); deadline.Sub(c.lastRead) >= time.Second {
 		if err := c.netConn.SetReadDeadline(deadline); err != nil {
 			return err
@@ -76,7 +76,7 @@ func (c *http1Conn_[H]) setReadDeadline() error {
 	}
 	return nil
 }
-func (c *http1Conn_[H]) setWriteDeadline() error {
+func (c *http1Conn_[H, S]) setWriteDeadline() error {
 	if deadline := time.Now().Add(c.holder.WriteTimeout()); deadline.Sub(c.lastWrite) >= time.Second {
 		if err := c.netConn.SetWriteDeadline(deadline); err != nil {
 			return err
@@ -86,10 +86,10 @@ func (c *http1Conn_[H]) setWriteDeadline() error {
 	return nil
 }
 
-func (c *http1Conn_[H]) read(dst []byte) (int, error)     { return c.netConn.Read(dst) }
-func (c *http1Conn_[H]) readFull(dst []byte) (int, error) { return io.ReadFull(c.netConn, dst) }
-func (c *http1Conn_[H]) write(src []byte) (int, error)    { return c.netConn.Write(src) }
-func (c *http1Conn_[H]) writeVec(srcVec *net.Buffers) (int64, error) {
+func (c *http1Conn_[H, S]) read(dst []byte) (int, error)     { return c.netConn.Read(dst) }
+func (c *http1Conn_[H, S]) readFull(dst []byte) (int, error) { return io.ReadFull(c.netConn, dst) }
+func (c *http1Conn_[H, S]) write(src []byte) (int, error)    { return c.netConn.Write(src) }
+func (c *http1Conn_[H, S]) writeVec(srcVec *net.Buffers) (int64, error) {
 	return srcVec.WriteTo(c.netConn)
 }
 
@@ -1098,6 +1098,8 @@ func (s *_http1Socket_) onEnd() {
 func (s *_http1Socket_) todo1() {
 	s.todo()
 }
+
+////////////////////////////////////////////////////////////////
 
 var http1Status = [16]byte{'H', 'T', 'T', 'P', '/', '1', '.', '1', ' ', 'N', 'N', 'N', ' ', 'X', '\r', '\n'}
 var http1Controls = [...][]byte{ // size: 512*24B=12K

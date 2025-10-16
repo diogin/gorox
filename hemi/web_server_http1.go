@@ -20,14 +20,14 @@ import (
 // server1Conn is the server-side HTTP/1.x connection.
 type server1Conn struct {
 	// Parent
-	http1Conn_[*httpxGate]
+	http1Conn_[*httpxGate, *server1Stream]
 	// Mixins
 	// Assocs
 	stream server1Stream // an http/1.x connection has exactly one stream
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	closeSafe bool // if false, send a FIN first to avoid TCP's RST following immediate close(). true by default
+	closeSafe bool // if false, then send a FIN first to avoid TCP's RST following immediate close(). true by default
 	// Conn states (zeros)
 }
 
@@ -104,7 +104,6 @@ func (c *server1Conn) serve() { // runner
 	// response. Finally, the server fully closes the connection.
 	netConn := c.netConn
 	if !c.closeSafe {
-		// TODO: use "CloseWriter" interface?
 		if c.UDSMode() {
 			netConn.(*net.UnixConn).CloseWrite()
 		} else if c.TLSMode() {
@@ -303,7 +302,7 @@ func (s *server1Stream) _serveAbnormal(req *server1Request, resp *server1Respons
 	}
 }
 func (s *server1Stream) _writeContinue() bool { // 100 continue
-	// This is an interim response, write directly.
+	// This is an interim response, so write directly.
 	if s.setWriteDeadline() == nil { // for _writeContinue
 		if _, err := s.write(http1BytesContinue); err == nil {
 			return true

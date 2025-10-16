@@ -13,6 +13,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/diogin/gorox/hemi/library/gotcp2"
 )
@@ -80,7 +81,9 @@ type http3Stream_[C http3Conn] struct { // for backend3Stream and server3Stream
 	// Stream states (non-zeros)
 	quicStream *gotcp2.Stream // the underlying quic stream
 	// Stream states (zeros)
-	_http3Stream0 // all values in this struct must be zero by default!
+	lastWrite     time.Time // deadline of last write operation
+	lastRead      time.Time // deadline of last read operation
+	_http3Stream0           // all values in this struct must be zero by default!
 }
 type _http3Stream0 struct { // for fast reset, entirely
 }
@@ -93,6 +96,8 @@ func (s *http3Stream_[C]) onUse(conn C, quicStream *gotcp2.Stream) {
 func (s *http3Stream_[C]) onEnd() {
 	s._http3Stream0 = _http3Stream0{}
 
+	s.lastRead = time.Time{}
+	s.lastWrite = time.Time{}
 	s.quicStream = nil
 	s.httpStream_.onEnd()
 }
@@ -288,6 +293,8 @@ func (s *_http3Socket_) onEnd() {
 func (s *_http3Socket_) todo3() {
 	s.todo()
 }
+
+////////////////////////////////////////////////////////////////
 
 const ( // HTTP/3 sizes and limits for both of our HTTP/3 server and HTTP/3 backend
 	http3MaxTableSize         = _4K

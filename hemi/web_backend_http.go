@@ -104,7 +104,7 @@ type BackendResponse interface { // for *backend[1-3]Response
 
 	// Internal only
 	recvHead()
-	reuse()
+	onReuse()
 	examineTail() bool
 	readContent() (data []byte, err error)
 	proxyTakeContent() any
@@ -177,7 +177,7 @@ func (r *backendResponse_) onEnd() { // for zeros
 	r._httpIn_.onEnd()
 }
 
-func (r *backendResponse_) reuse() { // between 1xx and non-1xx responses
+func (r *backendResponse_) onReuse() { // between a 1xx and non-1xx responses
 	httpVersion := r.httpVersion
 	r.onEnd() // this clears r.httpVersion
 	r.onUse(httpVersion)

@@ -176,7 +176,7 @@ func FCGIReverseProxy(httpReq ServerRequest, httpResp ServerResponse, hcache Hca
 			fcgiExchan.markBroken()
 			return
 		}
-		fcgiResp.reuse()
+		fcgiResp.onReuse()
 	}
 
 	var fcgiContent any
@@ -710,7 +710,7 @@ func (r *fcgiResponse) onEnd() {
 	r._fcgiResponse0 = _fcgiResponse0{}
 }
 
-func (r *fcgiResponse) reuse() {
+func (r *fcgiResponse) onReuse() {
 	r.onEnd()
 	r.onUse()
 }

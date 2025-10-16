@@ -236,7 +236,7 @@ func HTTPReverseProxy(servReq ServerRequest, servResp ServerResponse, hcache Hca
 			backStream.markBroken()
 			return
 		}
-		backResp.reuse()
+		backResp.onReuse()
 	}
 
 	var backContent any // nil, []byte, tempFile

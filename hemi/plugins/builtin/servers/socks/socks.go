@@ -113,7 +113,7 @@ func (g *socksGate) Serve() { // runner
 		}
 		g.IncConn()
 		socksConn := getSocksConn(connID, g, tcpConn)
-		go g.Server().serveConn(socksConn) // socksConn is put to pool in serve()
+		go g.Server().serveConn(socksConn) // socksConn will be put to pool in serve()
 		connID++
 	}
 	g.WaitConns() // TODO: max timeout?

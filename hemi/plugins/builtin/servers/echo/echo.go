@@ -110,7 +110,7 @@ func (g *echoGate) Serve() { // runner
 		}
 		g.IncConn()
 		echoConn := getEchoConn(connID, g, tcpConn)
-		go g.Server().serveConn(echoConn) // echoConn is put to pool in serve()
+		go g.Server().serveConn(echoConn) // echoConn will be put to pool in serve()
 		connID++
 	}
 	g.WaitConns() // TODO: max timeout?

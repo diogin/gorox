@@ -110,7 +110,7 @@ func (g *http3Gate) serveTLS() {
 			continue
 		}
 		server3Conn := getServer3Conn(connID, g, quicConn)
-		go server3Conn.serve() // server3Conn is put to pool in serve()
+		go server3Conn.serve() // server3Conn will be put to pool in serve()
 		connID++
 	}
 	g.WaitConns() // TODO: max timeout?
