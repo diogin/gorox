@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// General types and elements for net, rpc, and web.
+// General implementation for net, rpc, and web.
 
 package hemi
 
@@ -12,9 +12,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"math/rand"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -75,6 +78,355 @@ func (h *_holder_) TLSMode() bool               { return h.tlsMode }
 func (h *_holder_) TLSConfig() *tls.Config      { return h.tlsConfig }
 func (h *_holder_) ReadTimeout() time.Duration  { return h.readTimeout }
 func (h *_holder_) WriteTimeout() time.Duration { return h.writeTimeout }
+
+////////////////////////////////////////////////////////////////
+
+// Server component. A Server has a group of Gates.
+type Server interface {
+	// Imports
+	Component
+	// Methods
+	Serve()           // runner
+	holder() _holder_ // used by gates to copy the configs
+}
+
+// Server_ is a parent.
+type Server_[G Gate] struct { // for all servers
+	// Parent
+	Component_
+	// Mixins
+	_holder_ // to carry configs used by gates
+	// Assocs
+	gates []G // a server has many gates
+	// States
+	colonport         string // like: ":9876"
+	colonportBytes    []byte // []byte(colonport)
+	udsColonport      string // uds doesn't have a port. we can use this as its colonport if server is listening at uds
+	udsColonportBytes []byte // []byte(udsColonport)
+	numGates          int32  // number of gates
+}
+
+func (s *Server_[G]) OnCreate(compName string, stage *Stage) {
+	s.MakeComp(compName)
+	s.stage = stage
+}
+func (s *Server_[G]) OnShutdown() {
+	// We don't use close(s.ShutChan) to notify gates as gates are blocking on accept().
+	for _, gate := range s.gates {
+		gate.Shut() // this causes gate to close and return immediately
+	}
+}
+
+func (s *Server_[G]) OnConfigure() {
+	s._holder_.onConfigure(s, 60*time.Second, 60*time.Second)
+
+	// .address
+	if v, ok := s.Find("address"); ok {
+		if address, ok := v.String(); ok && address != "" {
+			if p := strings.IndexByte(address, ':'); p == -1 {
+				s.udsMode = true
+			} else {
+				s.colonport = address[p:]
+			}
+			s.address = address
+		} else {
+			UseExitln(".address should be of string type")
+		}
+	} else {
+		UseExitln(".address is required for servers")
+	}
+
+	if s.udsMode {
+		// .udsColonport
+		s.ConfigureString("udsColonport", &s.udsColonport, nil, ":80")
+	}
+
+	// .numGates
+	s.ConfigureInt32("numGates", &s.numGates, func(value int32) error {
+		if value > 0 {
+			return nil
+		}
+		return errors.New(".numGates has an invalid value")
+	}, int32(s.stage.NumCPU()))
+}
+func (s *Server_[G]) OnPrepare() {
+	s._holder_.onPrepare(s)
+
+	if s.udsMode {
+		s.udsColonportBytes = []byte(s.udsColonport)
+		s.numGates = 1 // unix domain socket does not support reuseaddr/reuseport.
+	} else {
+		s.colonportBytes = []byte(s.colonport)
+	}
+}
+
+func (s *Server_[G]) NumGates() int32 { return s.numGates }
+func (s *Server_[G]) AddGate(gate G) { // Serve() calls this to append gates
+	s.gates = append(s.gates, gate)
+	s.subs.Add(1)
+}
+
+func (s *Server_[G]) Colonport() string {
+	if s.udsMode {
+		return s.udsColonport
+	} else {
+		return s.colonport
+	}
+}
+func (s *Server_[G]) ColonportBytes() []byte {
+	if s.udsMode {
+		return s.udsColonportBytes
+	} else {
+		return s.colonportBytes
+	}
+}
+
+func (s *Server_[G]) DecGate()   { s.subs.Done() }
+func (s *Server_[G]) WaitGates() { s.subs.Wait() }
+
+func (s *Server_[G]) holder() _holder_ { return s._holder_ } // for copying configs
+
+// Gate is the interface for all gates. Gates are not components.
+type Gate interface {
+	// Imports
+	holder
+	// Methods
+	Shut() error
+	IsShut() bool
+}
+
+// Gate_ is a parent.
+type Gate_[S Server] struct { // for all gates
+	// Mixins
+	_holder_ // hold conns
+	// Assocs
+	server S
+	// States
+	id   int32          // gate id
+	shut atomic.Bool    // is gate shut?
+	subs sync.WaitGroup // sub conns to wait for
+}
+
+func (g *Gate_[S]) OnNew(server S, id int32) {
+	g._holder_ = server.holder()
+	g.server = server
+	g.id = id
+	g.shut.Store(false)
+}
+
+func (g *Gate_[S]) Server() S { return g.server }
+
+func (g *Gate_[S]) ID() int32    { return g.id }
+func (g *Gate_[S]) MarkShut()    { g.shut.Store(true) }
+func (g *Gate_[S]) IsShut() bool { return g.shut.Load() }
+
+func (g *Gate_[S]) IncConn()   { g.subs.Add(1) }
+func (g *Gate_[S]) DecConn()   { g.subs.Done() }
+func (g *Gate_[S]) WaitConns() { g.subs.Wait() }
+
+////////////////////////////////////////////////////////////////
+
+// Backend component. A Backend is a group of nodes.
+type Backend interface {
+	// Imports
+	Component
+	// Methods
+	Maintain() // runner
+	CreateNode(compName string) Node
+}
+
+// Backend_ is a parent.
+type Backend_[N Node] struct { // for all backends
+	// Parent
+	Component_
+	// Assocs
+	stage *Stage // current stage
+	nodes []N    // nodes of this backend
+	// States
+	balancer     string       // roundRobin, ipHash, random, ...
+	numNodes     int64        // num of nodes
+	nodeIndexGet func() int64 // ...
+	nodeIndex    atomic.Int64 // for roundRobin. won't overflow because it is so large!
+	healthCheck  any          // TODO
+}
+
+func (b *Backend_[N]) OnCreate(compName string, stage *Stage) {
+	b.MakeComp(compName)
+	b.stage = stage
+	b.nodeIndex.Store(-1)
+	b.healthCheck = nil // TODO
+}
+func (b *Backend_[N]) OnShutdown() { close(b.ShutChan) } // notifies Maintain() which also shutdown nodes
+
+func (b *Backend_[N]) OnConfigure() {
+	// .balancer
+	b.ConfigureString("balancer", &b.balancer, func(value string) error {
+		if value == "roundRobin" || value == "ipHash" || value == "random" || value == "leastUsed" {
+			return nil
+		}
+		return errors.New(".balancer has an invalid value")
+	}, "roundRobin")
+}
+func (b *Backend_[N]) OnPrepare() {
+	switch b.balancer {
+	case "roundRobin":
+		b.nodeIndexGet = b._nextIndexByRoundRobin
+	case "random":
+		b.nodeIndexGet = b._nextIndexByRandom
+	case "ipHash":
+		b.nodeIndexGet = b._nextIndexByIPHash
+	case "leastUsed":
+		b.nodeIndexGet = b._nextIndexByLeastUsed
+	default:
+		BugExitln("unknown balancer")
+	}
+	b.numNodes = int64(len(b.nodes))
+}
+
+func (b *Backend_[N]) ConfigureNodes() {
+	for _, node := range b.nodes {
+		node.OnConfigure()
+	}
+}
+func (b *Backend_[N]) PrepareNodes() {
+	for _, node := range b.nodes {
+		node.OnPrepare()
+	}
+}
+
+func (b *Backend_[N]) Stage() *Stage { return b.stage }
+
+func (b *Backend_[N]) Maintain() { // runner
+	for _, node := range b.nodes {
+		b.subs.Add(1) // node
+		go node.Maintain()
+	}
+
+	// Waiting for the shutdown signal
+	<-b.ShutChan
+	// Current backend was told to shutdown. Tell its nodes to shutdown too
+	for _, node := range b.nodes {
+		go node.OnShutdown()
+	}
+	b.subs.Wait() // nodes
+
+	if DebugLevel() >= 2 {
+		Printf("backend=%s done\n", b.CompName())
+	}
+
+	b.stage.DecBackend()
+}
+
+func (b *Backend_[N]) AddNode(node N) { // CreateNode() uses this to append nodes
+	node.setShell(node)
+	b.nodes = append(b.nodes, node)
+}
+func (b *Backend_[N]) DecNode() { b.subs.Done() }
+
+func (b *Backend_[N]) _nextIndexByRoundRobin() int64 {
+	index := b.nodeIndex.Add(1)
+	return index % b.numNodes
+}
+func (b *Backend_[N]) _nextIndexByRandom() int64 {
+	return rand.Int63n(b.numNodes)
+}
+func (b *Backend_[N]) _nextIndexByIPHash() int64 {
+	// TODO
+	return 0
+}
+func (b *Backend_[N]) _nextIndexByLeastUsed() int64 {
+	// TODO
+	return 0
+}
+
+// Node is a member of backend.
+type Node interface {
+	// Imports
+	Component
+	holder
+	// Methods
+	Maintain() // runner
+}
+
+// Node_ is a parent.
+type Node_[B Backend] struct { // for all backend nodes
+	// Parent
+	Component_
+	// Mixins
+	_holder_ // hold conns
+	// Assocs
+	backend B // the containing backend
+	// States
+	dialTimeout time.Duration // dial remote timeout
+	weight      int32         // 1, 22, 333, ...
+	connID      atomic.Int64  // next conn id
+	down        atomic.Bool   // TODO: false-sharing
+	health      any           // TODO
+}
+
+func (n *Node_[B]) OnCreate(compName string, stage *Stage, backend B) {
+	n.MakeComp(compName)
+	n.stage = stage
+	n.backend = backend
+	n.health = nil // TODO
+}
+func (n *Node_[B]) OnShutdown() { close(n.ShutChan) } // notifies Node.Maintain() which also closes conns
+
+func (n *Node_[B]) OnConfigure() {
+	n._holder_.onConfigure(n, 30*time.Second, 30*time.Second)
+
+	// .address
+	if v, ok := n.Find("address"); ok {
+		if address, ok := v.String(); ok && address != "" {
+			if address[0] == '@' { // abstract uds
+				n.udsMode = true
+			} else if _, err := os.Stat(address); err == nil { // pathname uds
+				n.udsMode = true
+			}
+			n.address = address
+		} else {
+			UseExitln("bad address in node")
+		}
+	} else {
+		UseExitln("address is required in node")
+	}
+
+	// .dialTimeout
+	n.ConfigureDuration("dialTimeout", &n.dialTimeout, func(value time.Duration) error {
+		if value >= time.Second {
+			return nil
+		}
+		return errors.New(".dialTimeout has an invalid value")
+	}, 10*time.Second)
+
+	// .weight
+	n.ConfigureInt32("weight", &n.weight, func(value int32) error {
+		if value > 0 {
+			return nil
+		}
+		return errors.New("bad node weight")
+	}, 1)
+}
+func (n *Node_[B]) OnPrepare() {
+	n._holder_.onPrepare(n)
+}
+
+func (n *Node_[B]) Backend() B { return n.backend }
+
+func (n *Node_[B]) DialTimeout() time.Duration { return n.dialTimeout }
+
+func (n *Node_[B]) nextConnID() int64 { return n.connID.Add(1) }
+
+func (n *Node_[B]) markDown()    { n.down.Store(true) }
+func (n *Node_[B]) markUp()      { n.down.Store(false) }
+func (n *Node_[B]) isDown() bool { return n.down.Load() }
+
+func (n *Node_[B]) IncConn()          { n.subs.Add(1) }
+func (n *Node_[B]) DecConn()          { n.subs.Done() }
+func (n *Node_[B]) DecConns(size int) { n.subs.Add(-size) }
+func (n *Node_[B]) WaitConns()        { n.subs.Wait() }
+
+////////////////////////////////////////////////////////////////
 
 // contentSaver
 type contentSaver interface { // for _contentSaver_

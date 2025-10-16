@@ -19,6 +19,284 @@ import (
 	"github.com/diogin/gorox/hemi/library/gotcp2"
 )
 
+// http3Conn
+type http3Conn interface { // for *backend3Conn and *server3Conn
+	// Imports
+	httpConn
+	// Methods
+}
+
+// http3Conn_ is a parent.
+type http3Conn_[H httpHolder, S http3Stream] struct { // for backend3Conn and server3Conn
+	// Parent
+	httpConn_[H]
+	// Conn states (stocks)
+	// Conn states (controlled)
+	// Conn states (non-zeros)
+	quicConn    *gotcp2.Conn // the underlying quic connection
+	inBuffer    *http3Buffer // ...
+	decodeTable qpackTable   // ...
+	encodeTable qpackTable   // ...
+	// Conn states (zeros)
+	_http3Conn0 // all values in this struct must be zero by default!
+}
+type _http3Conn0 struct { // for fast reset, entirely
+	inBufferEdge uint32 // incoming data ends at c.inBuffer.buf[c.inBufferEdge]
+	sectBack     uint32 // incoming frame section (header or payload) begins from c.inBuffer.buf[c.sectBack]
+	sectFore     uint32 // incoming frame section (header or payload) ends at c.inBuffer.buf[c.sectFore]
+}
+
+func (c *http3Conn_[H, S]) onGet(id int64, holder H, quicConn *gotcp2.Conn) {
+	c.httpConn_.onGet(id, holder)
+
+	c.quicConn = quicConn
+	if c.inBuffer == nil {
+		c.inBuffer = getHTTP3Buffer()
+		c.inBuffer.incRef()
+	}
+}
+func (c *http3Conn_[H, S]) onPut() {
+	// c.inBuffer is reserved
+	// c.decodeTable is reserved
+	// c.encodeTable is reserved
+	c.quicConn = nil
+
+	c.httpConn_.onPut()
+}
+
+func (c *http3Conn_[H, S]) remoteAddr() net.Addr { return nil } // TODO
+
+// http3Stream
+type http3Stream interface { // for *backend3Stream and *server3Stream
+	// Imports
+	httpStream
+	// Methods
+}
+
+// http3Stream_ is a parent.
+type http3Stream_[C http3Conn] struct { // for backend3Stream and server3Stream
+	// Parent
+	httpStream_[C]
+	// Stream states (stocks)
+	// Stream states (controlled)
+	// Stream states (non-zeros)
+	quicStream *gotcp2.Stream // the underlying quic stream
+	// Stream states (zeros)
+	lastWrite     time.Time // deadline of last write operation
+	lastRead      time.Time // deadline of last read operation
+	_http3Stream0           // all values in this struct must be zero by default!
+}
+type _http3Stream0 struct { // for fast reset, entirely
+}
+
+func (s *http3Stream_[C]) onUse(conn C, quicStream *gotcp2.Stream) {
+	s.httpStream_.onUse(conn)
+
+	s.quicStream = quicStream
+}
+func (s *http3Stream_[C]) onEnd() {
+	s._http3Stream0 = _http3Stream0{}
+
+	s.lastRead = time.Time{}
+	s.lastWrite = time.Time{}
+	s.quicStream = nil
+	s.httpStream_.onEnd()
+}
+
+func (s *http3Stream_[C]) ID() int64 { return s.quicStream.ID() }
+
+func (s *http3Stream_[C]) markBroken()    {}               // TODO
+func (s *http3Stream_[C]) isBroken() bool { return false } // TODO
+
+func (s *http3Stream_[C]) setReadDeadline() error {
+	// TODO
+	return nil
+}
+func (s *http3Stream_[C]) setWriteDeadline() error {
+	// TODO
+	return nil
+}
+
+func (s *http3Stream_[C]) read(dst []byte) (int, error)     { return s.quicStream.Read(dst) }
+func (s *http3Stream_[C]) readFull(dst []byte) (int, error) { return io.ReadFull(s.quicStream, dst) }
+func (s *http3Stream_[C]) write(src []byte) (int, error)    { return s.quicStream.Write(src) }
+func (s *http3Stream_[C]) writeVec(srcVec *net.Buffers) (int64, error) {
+	return srcVec.WriteTo(s.quicStream)
+}
+
+// _http3In_ is a mixin.
+type _http3In_ struct { // for backend3Response and server3Request
+	// Parent
+	*_httpIn_
+	// Stream states (stocks)
+	// Stream states (controlled)
+	// Stream states (non-zeros)
+	// Stream states (zeros)
+}
+
+func (r *_http3In_) onUse(parent *_httpIn_) {
+	r._httpIn_ = parent
+}
+func (r *_http3In_) onEnd() {
+	r._httpIn_ = nil
+}
+
+func (r *_http3In_) _growHeaders(size int32) bool {
+	// TODO
+	// use r.input
+	return false
+}
+
+func (r *_http3In_) readContent() (data []byte, err error) {
+	// TODO
+	return
+}
+func (r *_http3In_) _readSizedContent() ([]byte, error) {
+	// r.stream.setReadDeadline() // may be called multiple times during the reception of the sized content
+	return nil, nil
+}
+func (r *_http3In_) _readVagueContent() ([]byte, error) {
+	// r.stream.setReadDeadline() // may be called multiple times during the reception of the vague content
+	return nil, nil
+}
+
+// _http3Out_ is a mixin.
+type _http3Out_ struct { // for backend3Request and server3Response
+	// Parent
+	*_httpOut_
+	// Stream states (stocks)
+	// Stream states (controlled)
+	// Stream states (non-zeros)
+	// Stream states (zeros)
+}
+
+func (r *_http3Out_) onUse(parent *_httpOut_) {
+	r._httpOut_ = parent
+}
+func (r *_http3Out_) onEnd() {
+	r._httpOut_ = nil
+}
+
+func (r *_http3Out_) addHeader(name []byte, value []byte) bool {
+	// TODO
+	return false
+}
+func (r *_http3Out_) header(name []byte) (value []byte, ok bool) {
+	// TODO
+	return
+}
+func (r *_http3Out_) hasHeader(name []byte) bool {
+	// TODO
+	return false
+}
+func (r *_http3Out_) delHeader(name []byte) (deleted bool) {
+	// TODO
+	return false
+}
+func (r *_http3Out_) delHeaderAt(i uint8) {
+	// TODO
+}
+
+func (r *_http3Out_) sendChain() error {
+	// TODO
+	return nil
+}
+func (r *_http3Out_) _sendEntireChain() error {
+	// TODO
+	return nil
+}
+func (r *_http3Out_) _sendSingleRange() error {
+	// TODO
+	return nil
+}
+func (r *_http3Out_) _sendMultiRanges() error {
+	// TODO
+	return nil
+}
+
+func (r *_http3Out_) echoChain() error {
+	// TODO
+	return nil
+}
+
+func (r *_http3Out_) addTrailer(name []byte, value []byte) bool {
+	// TODO
+	return false
+}
+func (r *_http3Out_) trailer(name []byte) (value []byte, ok bool) {
+	// TODO
+	return
+}
+func (r *_http3Out_) trailers() []byte {
+	// TODO
+	return nil
+}
+
+func (r *_http3Out_) proxyPassBytes(data []byte) error { return r.writeBytes(data) }
+
+func (r *_http3Out_) finalizeVague() error {
+	// TODO
+	if r.numTrailerFields == 1 { // no trailer section
+	} else { // with trailer section
+	}
+	return nil
+}
+
+func (r *_http3Out_) writeHeaders() error { // used by echo and pass
+	// TODO
+	r.outputEdge = 0 // now that header output are all sent, r.output will be used by trailer fields (if any), so reset it.
+	return nil
+}
+func (r *_http3Out_) writePiece(piece *Piece, vague bool) error {
+	// TODO
+	return nil
+}
+func (r *_http3Out_) _writeTextPiece(piece *Piece) error {
+	// TODO
+	return nil
+}
+func (r *_http3Out_) _writeFilePiece(piece *Piece) error {
+	// TODO
+	// r.stream.setWriteDeadline() // for _writeFilePiece
+	// r.stream.write() or r.stream.writeVec()
+	return nil
+}
+func (r *_http3Out_) writeVector() error {
+	// TODO
+	// r.stream.setWriteDeadline() // for writeVector
+	// r.stream.writeVec()
+	return nil
+}
+func (r *_http3Out_) writeBytes(data []byte) error {
+	// TODO
+	// r.stream.setWriteDeadline() // for writeBytes
+	// r.stream.write()
+	return nil
+}
+
+// _http3Socket_ is a mixin.
+type _http3Socket_ struct { // for backend3Socket and server3Socket
+	// Parent
+	*_httpSocket_
+	// Stream states (stocks)
+	// Stream states (controlled)
+	// Stream states (non-zeros)
+	// Stream states (zeros)
+}
+
+func (s *_http3Socket_) onUse(parent *_httpSocket_) {
+	s._httpSocket_ = parent
+}
+func (s *_http3Socket_) onEnd() {
+	s._httpSocket_ = nil
+}
+
+func (s *_http3Socket_) todo3() {
+	s.todo()
+}
+
+////////////////////////////////////////////////////////////////
+
 func init() {
 	RegisterServer("http3Server", func(compName string, stage *Stage) Server {
 		s := new(http3Server)
@@ -743,284 +1021,6 @@ func (s *backend3Socket) onEnd() {
 func (s *backend3Socket) backendTodo3() {
 	s.backendTodo()
 	s.so3.todo3()
-}
-
-////////////////////////////////////////////////////////////////
-
-// http3Conn
-type http3Conn interface { // for *backend3Conn and *server3Conn
-	// Imports
-	httpConn
-	// Methods
-}
-
-// http3Conn_ is a parent.
-type http3Conn_[H httpHolder, S http3Stream] struct { // for backend3Conn and server3Conn
-	// Parent
-	httpConn_[H]
-	// Conn states (stocks)
-	// Conn states (controlled)
-	// Conn states (non-zeros)
-	quicConn    *gotcp2.Conn // the underlying quic connection
-	inBuffer    *http3Buffer // ...
-	decodeTable qpackTable   // ...
-	encodeTable qpackTable   // ...
-	// Conn states (zeros)
-	_http3Conn0 // all values in this struct must be zero by default!
-}
-type _http3Conn0 struct { // for fast reset, entirely
-	inBufferEdge uint32 // incoming data ends at c.inBuffer.buf[c.inBufferEdge]
-	sectBack     uint32 // incoming frame section (header or payload) begins from c.inBuffer.buf[c.sectBack]
-	sectFore     uint32 // incoming frame section (header or payload) ends at c.inBuffer.buf[c.sectFore]
-}
-
-func (c *http3Conn_[H, S]) onGet(id int64, holder H, quicConn *gotcp2.Conn) {
-	c.httpConn_.onGet(id, holder)
-
-	c.quicConn = quicConn
-	if c.inBuffer == nil {
-		c.inBuffer = getHTTP3Buffer()
-		c.inBuffer.incRef()
-	}
-}
-func (c *http3Conn_[H, S]) onPut() {
-	// c.inBuffer is reserved
-	// c.decodeTable is reserved
-	// c.encodeTable is reserved
-	c.quicConn = nil
-
-	c.httpConn_.onPut()
-}
-
-func (c *http3Conn_[H, S]) remoteAddr() net.Addr { return nil } // TODO
-
-// http3Stream
-type http3Stream interface { // for *backend3Stream and *server3Stream
-	// Imports
-	httpStream
-	// Methods
-}
-
-// http3Stream_ is a parent.
-type http3Stream_[C http3Conn] struct { // for backend3Stream and server3Stream
-	// Parent
-	httpStream_[C]
-	// Stream states (stocks)
-	// Stream states (controlled)
-	// Stream states (non-zeros)
-	quicStream *gotcp2.Stream // the underlying quic stream
-	// Stream states (zeros)
-	lastWrite     time.Time // deadline of last write operation
-	lastRead      time.Time // deadline of last read operation
-	_http3Stream0           // all values in this struct must be zero by default!
-}
-type _http3Stream0 struct { // for fast reset, entirely
-}
-
-func (s *http3Stream_[C]) onUse(conn C, quicStream *gotcp2.Stream) {
-	s.httpStream_.onUse(conn)
-
-	s.quicStream = quicStream
-}
-func (s *http3Stream_[C]) onEnd() {
-	s._http3Stream0 = _http3Stream0{}
-
-	s.lastRead = time.Time{}
-	s.lastWrite = time.Time{}
-	s.quicStream = nil
-	s.httpStream_.onEnd()
-}
-
-func (s *http3Stream_[C]) ID() int64 { return s.quicStream.ID() }
-
-func (s *http3Stream_[C]) markBroken()    {}               // TODO
-func (s *http3Stream_[C]) isBroken() bool { return false } // TODO
-
-func (s *http3Stream_[C]) setReadDeadline() error {
-	// TODO
-	return nil
-}
-func (s *http3Stream_[C]) setWriteDeadline() error {
-	// TODO
-	return nil
-}
-
-func (s *http3Stream_[C]) read(dst []byte) (int, error)     { return s.quicStream.Read(dst) }
-func (s *http3Stream_[C]) readFull(dst []byte) (int, error) { return io.ReadFull(s.quicStream, dst) }
-func (s *http3Stream_[C]) write(src []byte) (int, error)    { return s.quicStream.Write(src) }
-func (s *http3Stream_[C]) writeVec(srcVec *net.Buffers) (int64, error) {
-	return srcVec.WriteTo(s.quicStream)
-}
-
-// _http3In_ is a mixin.
-type _http3In_ struct { // for backend3Response and server3Request
-	// Parent
-	*_httpIn_
-	// Stream states (stocks)
-	// Stream states (controlled)
-	// Stream states (non-zeros)
-	// Stream states (zeros)
-}
-
-func (r *_http3In_) onUse(parent *_httpIn_) {
-	r._httpIn_ = parent
-}
-func (r *_http3In_) onEnd() {
-	r._httpIn_ = nil
-}
-
-func (r *_http3In_) _growHeaders(size int32) bool {
-	// TODO
-	// use r.input
-	return false
-}
-
-func (r *_http3In_) readContent() (data []byte, err error) {
-	// TODO
-	return
-}
-func (r *_http3In_) _readSizedContent() ([]byte, error) {
-	// r.stream.setReadDeadline() // may be called multiple times during the reception of the sized content
-	return nil, nil
-}
-func (r *_http3In_) _readVagueContent() ([]byte, error) {
-	// r.stream.setReadDeadline() // may be called multiple times during the reception of the vague content
-	return nil, nil
-}
-
-// _http3Out_ is a mixin.
-type _http3Out_ struct { // for backend3Request and server3Response
-	// Parent
-	*_httpOut_
-	// Stream states (stocks)
-	// Stream states (controlled)
-	// Stream states (non-zeros)
-	// Stream states (zeros)
-}
-
-func (r *_http3Out_) onUse(parent *_httpOut_) {
-	r._httpOut_ = parent
-}
-func (r *_http3Out_) onEnd() {
-	r._httpOut_ = nil
-}
-
-func (r *_http3Out_) addHeader(name []byte, value []byte) bool {
-	// TODO
-	return false
-}
-func (r *_http3Out_) header(name []byte) (value []byte, ok bool) {
-	// TODO
-	return
-}
-func (r *_http3Out_) hasHeader(name []byte) bool {
-	// TODO
-	return false
-}
-func (r *_http3Out_) delHeader(name []byte) (deleted bool) {
-	// TODO
-	return false
-}
-func (r *_http3Out_) delHeaderAt(i uint8) {
-	// TODO
-}
-
-func (r *_http3Out_) sendChain() error {
-	// TODO
-	return nil
-}
-func (r *_http3Out_) _sendEntireChain() error {
-	// TODO
-	return nil
-}
-func (r *_http3Out_) _sendSingleRange() error {
-	// TODO
-	return nil
-}
-func (r *_http3Out_) _sendMultiRanges() error {
-	// TODO
-	return nil
-}
-
-func (r *_http3Out_) echoChain() error {
-	// TODO
-	return nil
-}
-
-func (r *_http3Out_) addTrailer(name []byte, value []byte) bool {
-	// TODO
-	return false
-}
-func (r *_http3Out_) trailer(name []byte) (value []byte, ok bool) {
-	// TODO
-	return
-}
-func (r *_http3Out_) trailers() []byte {
-	// TODO
-	return nil
-}
-
-func (r *_http3Out_) proxyPassBytes(data []byte) error { return r.writeBytes(data) }
-
-func (r *_http3Out_) finalizeVague() error {
-	// TODO
-	if r.numTrailerFields == 1 { // no trailer section
-	} else { // with trailer section
-	}
-	return nil
-}
-
-func (r *_http3Out_) writeHeaders() error { // used by echo and pass
-	// TODO
-	r.outputEdge = 0 // now that header output are all sent, r.output will be used by trailer fields (if any), so reset it.
-	return nil
-}
-func (r *_http3Out_) writePiece(piece *Piece, vague bool) error {
-	// TODO
-	return nil
-}
-func (r *_http3Out_) _writeTextPiece(piece *Piece) error {
-	// TODO
-	return nil
-}
-func (r *_http3Out_) _writeFilePiece(piece *Piece) error {
-	// TODO
-	// r.stream.setWriteDeadline() // for _writeFilePiece
-	// r.stream.write() or r.stream.writeVec()
-	return nil
-}
-func (r *_http3Out_) writeVector() error {
-	// TODO
-	// r.stream.setWriteDeadline() // for writeVector
-	// r.stream.writeVec()
-	return nil
-}
-func (r *_http3Out_) writeBytes(data []byte) error {
-	// TODO
-	// r.stream.setWriteDeadline() // for writeBytes
-	// r.stream.write()
-	return nil
-}
-
-// _http3Socket_ is a mixin.
-type _http3Socket_ struct { // for backend3Socket and server3Socket
-	// Parent
-	*_httpSocket_
-	// Stream states (stocks)
-	// Stream states (controlled)
-	// Stream states (non-zeros)
-	// Stream states (zeros)
-}
-
-func (s *_http3Socket_) onUse(parent *_httpSocket_) {
-	s._httpSocket_ = parent
-}
-func (s *_http3Socket_) onEnd() {
-	s._httpSocket_ = nil
-}
-
-func (s *_http3Socket_) todo3() {
-	s.todo()
 }
 
 ////////////////////////////////////////////////////////////////
