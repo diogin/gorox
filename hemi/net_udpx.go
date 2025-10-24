@@ -2,7 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// UDPX (UDP/UDS) Network Proxy implementation. See RFC 768 and RFC 8085.
+// UDPX (UDP/UDS) Network implementation. See RFC 768 and RFC 8085.
 
 package hemi
 
@@ -68,8 +68,8 @@ func (c *udpxCase) isMatch(conn *UDPXConn) bool {
 	if c.general {
 		return true
 	}
-	value := conn.riskyVariable(c.varCode, c.varName)
-	return c.matcher(c, conn, value)
+	varValue := conn.riskyVariable(c.varCode, c.varName)
+	return c.matcher(c, conn, varValue)
 }
 
 func (c *udpxCase) execute(conn *UDPXConn) (dealt bool) {
@@ -143,67 +143,6 @@ type UDPXDealet_ struct { // for all udpx dealets
 func (d *UDPXDealet_) OnCreate(compName string, stage *Stage) {
 	d.MakeComp(compName)
 	d.stage = stage
-}
-
-func init() {
-	RegisterUDPXDealet("udpxProxy", func(compName string, stage *Stage, router *UDPXRouter) UDPXDealet {
-		d := new(udpxProxy)
-		d.onCreate(compName, stage, router)
-		return d
-	})
-}
-
-// udpxProxy dealet passes UDPX connections to UDPX backends.
-type udpxProxy struct {
-	// Parent
-	UDPXDealet_
-	// Assocs
-	router  *UDPXRouter  // the router to which the dealet belongs
-	backend *UDPXBackend // the backend to pass to
-	// States
-	UDPXProxyConfig // embeded
-}
-
-func (d *udpxProxy) onCreate(compName string, stage *Stage, router *UDPXRouter) {
-	d.UDPXDealet_.OnCreate(compName, stage)
-	d.router = router
-}
-func (d *udpxProxy) OnShutdown() { d.router.DecDealet() }
-
-func (d *udpxProxy) OnConfigure() {
-	// .toBackend
-	if v, ok := d.Find("toBackend"); ok {
-		if compName, ok := v.String(); ok && compName != "" {
-			if backend := d.stage.Backend(compName); backend == nil {
-				UseExitf("unknown backend: '%s'\n", compName)
-			} else if udpxBackend, ok := backend.(*UDPXBackend); ok {
-				d.backend = udpxBackend
-			} else {
-				UseExitf("incorrect backend '%s' for udpxProxy\n", compName)
-			}
-		} else {
-			UseExitln("invalid toBackend")
-		}
-	} else {
-		UseExitln("toBackend is required for udpxProxy")
-	}
-}
-func (d *udpxProxy) OnPrepare() {
-}
-
-func (d *udpxProxy) DealWith(conn *UDPXConn) (dealt bool) {
-	UDPXReverseProxy(conn, d.backend, &d.UDPXProxyConfig)
-	return true
-}
-
-// UDPXProxyConfig
-type UDPXProxyConfig struct {
-	// TODO
-}
-
-// UDPXReverseProxy
-func UDPXReverseProxy(servConn *UDPXConn, backend *UDPXBackend, proxyConfig *UDPXProxyConfig) {
-	// TODO
 }
 
 ////////////////////////////////////////////////////////////////

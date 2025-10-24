@@ -1,4 +1,0 @@
-Hacking
-=======
-
-To be written.
