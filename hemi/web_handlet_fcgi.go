@@ -55,10 +55,10 @@ func (h *fcgiProxy) OnConfigure() {
 		if compName, ok := v.String(); ok && compName != "" {
 			if backend := h.stage.Backend(compName); backend == nil {
 				UseExitf("unknown backend: '%s'\n", compName)
-			} else if fcgiBackend, ok := backend.(*FCGIBackend); ok {
-				h.backend = fcgiBackend
-			} else {
+			} else if fcgiBackend, ok := backend.(*FCGIBackend); !ok {
 				UseExitf("incorrect backend '%s' for fcgiProxy, must be fcgiBackend\n", compName)
+			} else {
+				h.backend = fcgiBackend
 			}
 		} else {
 			UseExitln("invalid toBackend")

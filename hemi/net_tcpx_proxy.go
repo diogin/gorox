@@ -37,10 +37,10 @@ func (d *tcpxProxy) OnConfigure() {
 		if compName, ok := v.String(); ok && compName != "" {
 			if backend := d.stage.Backend(compName); backend == nil {
 				UseExitf("unknown backend: '%s'\n", compName)
-			} else if tcpxBackend, ok := backend.(*TCPXBackend); ok {
-				d.backend = tcpxBackend
-			} else {
+			} else if tcpxBackend, ok := backend.(*TCPXBackend); !ok {
 				UseExitf("incorrect backend '%s' for tcpxProxy\n", compName)
+			} else {
+				d.backend = tcpxBackend
 			}
 		} else {
 			UseExitln("invalid toBackend")

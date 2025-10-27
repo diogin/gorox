@@ -15,138 +15,6 @@ import (
 	"time"
 )
 
-// udpxCase
-type udpxCase struct {
-	// Parent
-	case_
-	// Assocs
-	router  *UDPXRouter
-	dealets []UDPXDealet
-	// States
-	matcher func(kase *udpxCase, conn *UDPXConn, value []byte) bool
-}
-
-func (c *udpxCase) onCreate(compName string, router *UDPXRouter) {
-	c.MakeComp(compName)
-	c.router = router
-}
-func (c *udpxCase) OnShutdown() { c.router.DecCase() }
-
-func (c *udpxCase) OnConfigure() {
-	if c.info == nil {
-		c.general = true
-		return
-	}
-	cond := c.info.(caseCond)
-	c.varCode = cond.varCode
-	c.varName = cond.varName
-	isRegexp := cond.compare == "~=" || cond.compare == "!~"
-	for _, pattern := range cond.patterns {
-		if pattern == "" {
-			UseExitln("empty case cond pattern")
-		}
-		if !isRegexp {
-			c.patterns = append(c.patterns, []byte(pattern))
-		} else if exp, err := regexp.Compile(pattern); err == nil {
-			c.regexps = append(c.regexps, exp)
-		} else {
-			UseExitln(err.Error())
-		}
-	}
-	if matcher, ok := udpxCaseMatchers[cond.compare]; ok {
-		c.matcher = matcher
-	} else {
-		UseExitln("unknown compare in case condition")
-	}
-}
-func (c *udpxCase) OnPrepare() {
-}
-
-func (c *udpxCase) addDealet(dealet UDPXDealet) { c.dealets = append(c.dealets, dealet) }
-
-func (c *udpxCase) isMatch(conn *UDPXConn) bool {
-	if c.general {
-		return true
-	}
-	varValue := conn.riskyVariable(c.varCode, c.varName)
-	return c.matcher(c, conn, varValue)
-}
-
-func (c *udpxCase) execute(conn *UDPXConn) (dealt bool) {
-	for _, dealet := range c.dealets {
-		if dealt := dealet.DealWith(conn); dealt {
-			return true
-		}
-	}
-	return false
-}
-
-var udpxCaseMatchers = map[string]func(kase *udpxCase, conn *UDPXConn, value []byte) bool{
-	"==": (*udpxCase).equalMatch,
-	"^=": (*udpxCase).prefixMatch,
-	"$=": (*udpxCase).suffixMatch,
-	"*=": (*udpxCase).containMatch,
-	"~=": (*udpxCase).regexpMatch,
-	"!=": (*udpxCase).notEqualMatch,
-	"!^": (*udpxCase).notPrefixMatch,
-	"!$": (*udpxCase).notSuffixMatch,
-	"!*": (*udpxCase).notContainMatch,
-	"!~": (*udpxCase).notRegexpMatch,
-}
-
-func (c *udpxCase) equalMatch(conn *UDPXConn, value []byte) bool { // value == patterns
-	return equalMatch(value, c.patterns)
-}
-func (c *udpxCase) prefixMatch(conn *UDPXConn, value []byte) bool { // value ^= patterns
-	return prefixMatch(value, c.patterns)
-}
-func (c *udpxCase) suffixMatch(conn *UDPXConn, value []byte) bool { // value $= patterns
-	return suffixMatch(value, c.patterns)
-}
-func (c *udpxCase) containMatch(conn *UDPXConn, value []byte) bool { // value *= patterns
-	return containMatch(value, c.patterns)
-}
-func (c *udpxCase) regexpMatch(conn *UDPXConn, value []byte) bool { // value ~= patterns
-	return regexpMatch(value, c.regexps)
-}
-func (c *udpxCase) notEqualMatch(conn *UDPXConn, value []byte) bool { // value != patterns
-	return notEqualMatch(value, c.patterns)
-}
-func (c *udpxCase) notPrefixMatch(conn *UDPXConn, value []byte) bool { // value !^ patterns
-	return notPrefixMatch(value, c.patterns)
-}
-func (c *udpxCase) notSuffixMatch(conn *UDPXConn, value []byte) bool { // value !$ patterns
-	return notSuffixMatch(value, c.patterns)
-}
-func (c *udpxCase) notContainMatch(conn *UDPXConn, value []byte) bool { // value !* patterns
-	return notContainMatch(value, c.patterns)
-}
-func (c *udpxCase) notRegexpMatch(conn *UDPXConn, value []byte) bool { // value !~ patterns
-	return notRegexpMatch(value, c.regexps)
-}
-
-// UDPXDealet
-type UDPXDealet interface {
-	// Imports
-	Component
-	// Methods
-	DealWith(conn *UDPXConn) (dealt bool)
-}
-
-// UDPXDealet_ is a parent.
-type UDPXDealet_ struct { // for all udpx dealets
-	// Parent
-	dealet_
-	// States
-}
-
-func (d *UDPXDealet_) OnCreate(compName string, stage *Stage) {
-	d.MakeComp(compName)
-	d.stage = stage
-}
-
-////////////////////////////////////////////////////////////////
-
 // udpxHolder
 type udpxHolder interface {
 	// Imports
@@ -380,6 +248,136 @@ func (g *udpxGate) serveUDP() {
 
 func (g *udpxGate) justClose(pktConn net.PacketConn) {
 	pktConn.Close()
+}
+
+// udpxCase
+type udpxCase struct {
+	// Parent
+	case_
+	// Assocs
+	router  *UDPXRouter
+	dealets []UDPXDealet
+	// States
+	matcher func(kase *udpxCase, conn *UDPXConn, value []byte) bool
+}
+
+func (c *udpxCase) onCreate(compName string, router *UDPXRouter) {
+	c.MakeComp(compName)
+	c.router = router
+}
+func (c *udpxCase) OnShutdown() { c.router.DecCase() }
+
+func (c *udpxCase) OnConfigure() {
+	if c.info == nil {
+		c.general = true
+		return
+	}
+	cond := c.info.(caseCond)
+	c.varCode = cond.varCode
+	c.varName = cond.varName
+	isRegexp := cond.compare == "~=" || cond.compare == "!~"
+	for _, pattern := range cond.patterns {
+		if pattern == "" {
+			UseExitln("empty case cond pattern")
+		}
+		if !isRegexp {
+			c.patterns = append(c.patterns, []byte(pattern))
+		} else if exp, err := regexp.Compile(pattern); err == nil {
+			c.regexps = append(c.regexps, exp)
+		} else {
+			UseExitln(err.Error())
+		}
+	}
+	if matcher, ok := udpxCaseMatchers[cond.compare]; ok {
+		c.matcher = matcher
+	} else {
+		UseExitln("unknown compare in case condition")
+	}
+}
+func (c *udpxCase) OnPrepare() {
+}
+
+func (c *udpxCase) addDealet(dealet UDPXDealet) { c.dealets = append(c.dealets, dealet) }
+
+func (c *udpxCase) isMatch(conn *UDPXConn) bool {
+	if c.general {
+		return true
+	}
+	varValue := conn.riskyVariable(c.varCode, c.varName)
+	return c.matcher(c, conn, varValue)
+}
+
+func (c *udpxCase) execute(conn *UDPXConn) (dealt bool) {
+	for _, dealet := range c.dealets {
+		if dealt := dealet.DealWith(conn); dealt {
+			return true
+		}
+	}
+	return false
+}
+
+var udpxCaseMatchers = map[string]func(kase *udpxCase, conn *UDPXConn, value []byte) bool{
+	"==": (*udpxCase).equalMatch,
+	"^=": (*udpxCase).prefixMatch,
+	"$=": (*udpxCase).suffixMatch,
+	"*=": (*udpxCase).containMatch,
+	"~=": (*udpxCase).regexpMatch,
+	"!=": (*udpxCase).notEqualMatch,
+	"!^": (*udpxCase).notPrefixMatch,
+	"!$": (*udpxCase).notSuffixMatch,
+	"!*": (*udpxCase).notContainMatch,
+	"!~": (*udpxCase).notRegexpMatch,
+}
+
+func (c *udpxCase) equalMatch(conn *UDPXConn, value []byte) bool { // value == patterns
+	return equalMatch(value, c.patterns)
+}
+func (c *udpxCase) prefixMatch(conn *UDPXConn, value []byte) bool { // value ^= patterns
+	return prefixMatch(value, c.patterns)
+}
+func (c *udpxCase) suffixMatch(conn *UDPXConn, value []byte) bool { // value $= patterns
+	return suffixMatch(value, c.patterns)
+}
+func (c *udpxCase) containMatch(conn *UDPXConn, value []byte) bool { // value *= patterns
+	return containMatch(value, c.patterns)
+}
+func (c *udpxCase) regexpMatch(conn *UDPXConn, value []byte) bool { // value ~= patterns
+	return regexpMatch(value, c.regexps)
+}
+func (c *udpxCase) notEqualMatch(conn *UDPXConn, value []byte) bool { // value != patterns
+	return notEqualMatch(value, c.patterns)
+}
+func (c *udpxCase) notPrefixMatch(conn *UDPXConn, value []byte) bool { // value !^ patterns
+	return notPrefixMatch(value, c.patterns)
+}
+func (c *udpxCase) notSuffixMatch(conn *UDPXConn, value []byte) bool { // value !$ patterns
+	return notSuffixMatch(value, c.patterns)
+}
+func (c *udpxCase) notContainMatch(conn *UDPXConn, value []byte) bool { // value !* patterns
+	return notContainMatch(value, c.patterns)
+}
+func (c *udpxCase) notRegexpMatch(conn *UDPXConn, value []byte) bool { // value !~ patterns
+	return notRegexpMatch(value, c.regexps)
+}
+
+// UDPXDealet
+type UDPXDealet interface {
+	// Imports
+	Component
+	// Methods
+	DealWith(conn *UDPXConn) (dealt bool)
+}
+
+// UDPXDealet_ is a parent.
+type UDPXDealet_ struct { // for all udpx dealets
+	// Parent
+	dealet_
+	// States
+}
+
+func (d *UDPXDealet_) OnCreate(compName string, stage *Stage) {
+	d.MakeComp(compName)
+	d.stage = stage
 }
 
 // UDPXConn

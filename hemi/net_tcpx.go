@@ -21,138 +21,6 @@ import (
 	"github.com/diogin/gorox/hemi/library/system"
 )
 
-// tcpxCase
-type tcpxCase struct {
-	// Parent
-	case_
-	// Assocs
-	router  *TCPXRouter
-	dealets []TCPXDealet
-	// States
-	matcher func(kase *tcpxCase, conn *TCPXConn, value []byte) bool
-}
-
-func (c *tcpxCase) onCreate(compName string, router *TCPXRouter) {
-	c.MakeComp(compName)
-	c.router = router
-}
-func (c *tcpxCase) OnShutdown() { c.router.DecCase() }
-
-func (c *tcpxCase) OnConfigure() {
-	if c.info == nil {
-		c.general = true
-		return
-	}
-	cond := c.info.(caseCond)
-	c.varCode = cond.varCode
-	c.varName = cond.varName
-	isRegexp := cond.compare == "~=" || cond.compare == "!~"
-	for _, pattern := range cond.patterns {
-		if pattern == "" {
-			UseExitln("empty case cond pattern")
-		}
-		if !isRegexp {
-			c.patterns = append(c.patterns, []byte(pattern))
-		} else if exp, err := regexp.Compile(pattern); err == nil {
-			c.regexps = append(c.regexps, exp)
-		} else {
-			UseExitln(err.Error())
-		}
-	}
-	if matcher, ok := tcpxCaseMatchers[cond.compare]; ok {
-		c.matcher = matcher
-	} else {
-		UseExitln("unknown compare in case condition")
-	}
-}
-func (c *tcpxCase) OnPrepare() {
-}
-
-func (c *tcpxCase) addDealet(dealet TCPXDealet) { c.dealets = append(c.dealets, dealet) }
-
-func (c *tcpxCase) isMatch(conn *TCPXConn) bool {
-	if c.general {
-		return true
-	}
-	varValue := conn.riskyVariable(c.varCode, c.varName)
-	return c.matcher(c, conn, varValue)
-}
-
-func (c *tcpxCase) execute(conn *TCPXConn) (dealt bool) {
-	for _, dealet := range c.dealets {
-		if dealt := dealet.DealWith(conn); dealt {
-			return true
-		}
-	}
-	return false
-}
-
-var tcpxCaseMatchers = map[string]func(kase *tcpxCase, conn *TCPXConn, value []byte) bool{
-	"==": (*tcpxCase).equalMatch,
-	"^=": (*tcpxCase).prefixMatch,
-	"$=": (*tcpxCase).suffixMatch,
-	"*=": (*tcpxCase).containMatch,
-	"~=": (*tcpxCase).regexpMatch,
-	"!=": (*tcpxCase).notEqualMatch,
-	"!^": (*tcpxCase).notPrefixMatch,
-	"!$": (*tcpxCase).notSuffixMatch,
-	"!*": (*tcpxCase).notContainMatch,
-	"!~": (*tcpxCase).notRegexpMatch,
-}
-
-func (c *tcpxCase) equalMatch(conn *TCPXConn, value []byte) bool { // value == patterns
-	return equalMatch(value, c.patterns)
-}
-func (c *tcpxCase) prefixMatch(conn *TCPXConn, value []byte) bool { // value ^= patterns
-	return prefixMatch(value, c.patterns)
-}
-func (c *tcpxCase) suffixMatch(conn *TCPXConn, value []byte) bool { // value $= patterns
-	return suffixMatch(value, c.patterns)
-}
-func (c *tcpxCase) containMatch(conn *TCPXConn, value []byte) bool { // value *= patterns
-	return containMatch(value, c.patterns)
-}
-func (c *tcpxCase) regexpMatch(conn *TCPXConn, value []byte) bool { // value ~= patterns
-	return regexpMatch(value, c.regexps)
-}
-func (c *tcpxCase) notEqualMatch(conn *TCPXConn, value []byte) bool { // value != patterns
-	return notEqualMatch(value, c.patterns)
-}
-func (c *tcpxCase) notPrefixMatch(conn *TCPXConn, value []byte) bool { // value !^ patterns
-	return notPrefixMatch(value, c.patterns)
-}
-func (c *tcpxCase) notSuffixMatch(conn *TCPXConn, value []byte) bool { // value !$ patterns
-	return notSuffixMatch(value, c.patterns)
-}
-func (c *tcpxCase) notContainMatch(conn *TCPXConn, value []byte) bool { // value !* patterns
-	return notContainMatch(value, c.patterns)
-}
-func (c *tcpxCase) notRegexpMatch(conn *TCPXConn, value []byte) bool { // value !~ patterns
-	return notRegexpMatch(value, c.regexps)
-}
-
-// TCPXDealet
-type TCPXDealet interface {
-	// Imports
-	Component
-	// Methods
-	DealWith(conn *TCPXConn) (dealt bool)
-}
-
-// TCPXDealet_ is a parent.
-type TCPXDealet_ struct { // for all tcpx dealets
-	// Parent
-	dealet_
-	// States
-}
-
-func (d *TCPXDealet_) OnCreate(compName string, stage *Stage) {
-	d.MakeComp(compName)
-	d.stage = stage
-}
-
-////////////////////////////////////////////////////////////////
-
 // tcpxHolder
 type tcpxHolder interface {
 	// Imports
@@ -573,6 +441,136 @@ func (g *tcpxGate) justClose(netConn net.Conn) {
 	netConn.Close()
 	g.DecConcurrentConns()
 	g.DecConn()
+}
+
+// tcpxCase
+type tcpxCase struct {
+	// Parent
+	case_
+	// Assocs
+	router  *TCPXRouter
+	dealets []TCPXDealet
+	// States
+	matcher func(kase *tcpxCase, conn *TCPXConn, value []byte) bool
+}
+
+func (c *tcpxCase) onCreate(compName string, router *TCPXRouter) {
+	c.MakeComp(compName)
+	c.router = router
+}
+func (c *tcpxCase) OnShutdown() { c.router.DecCase() }
+
+func (c *tcpxCase) OnConfigure() {
+	if c.info == nil {
+		c.general = true
+		return
+	}
+	cond := c.info.(caseCond)
+	c.varCode = cond.varCode
+	c.varName = cond.varName
+	isRegexp := cond.compare == "~=" || cond.compare == "!~"
+	for _, pattern := range cond.patterns {
+		if pattern == "" {
+			UseExitln("empty case cond pattern")
+		}
+		if !isRegexp {
+			c.patterns = append(c.patterns, []byte(pattern))
+		} else if exp, err := regexp.Compile(pattern); err == nil {
+			c.regexps = append(c.regexps, exp)
+		} else {
+			UseExitln(err.Error())
+		}
+	}
+	if matcher, ok := tcpxCaseMatchers[cond.compare]; ok {
+		c.matcher = matcher
+	} else {
+		UseExitln("unknown compare in case condition")
+	}
+}
+func (c *tcpxCase) OnPrepare() {
+}
+
+func (c *tcpxCase) addDealet(dealet TCPXDealet) { c.dealets = append(c.dealets, dealet) }
+
+func (c *tcpxCase) isMatch(conn *TCPXConn) bool {
+	if c.general {
+		return true
+	}
+	varValue := conn.riskyVariable(c.varCode, c.varName)
+	return c.matcher(c, conn, varValue)
+}
+
+func (c *tcpxCase) execute(conn *TCPXConn) (dealt bool) {
+	for _, dealet := range c.dealets {
+		if dealt := dealet.DealWith(conn); dealt {
+			return true
+		}
+	}
+	return false
+}
+
+var tcpxCaseMatchers = map[string]func(kase *tcpxCase, conn *TCPXConn, value []byte) bool{
+	"==": (*tcpxCase).equalMatch,
+	"^=": (*tcpxCase).prefixMatch,
+	"$=": (*tcpxCase).suffixMatch,
+	"*=": (*tcpxCase).containMatch,
+	"~=": (*tcpxCase).regexpMatch,
+	"!=": (*tcpxCase).notEqualMatch,
+	"!^": (*tcpxCase).notPrefixMatch,
+	"!$": (*tcpxCase).notSuffixMatch,
+	"!*": (*tcpxCase).notContainMatch,
+	"!~": (*tcpxCase).notRegexpMatch,
+}
+
+func (c *tcpxCase) equalMatch(conn *TCPXConn, value []byte) bool { // value == patterns
+	return equalMatch(value, c.patterns)
+}
+func (c *tcpxCase) prefixMatch(conn *TCPXConn, value []byte) bool { // value ^= patterns
+	return prefixMatch(value, c.patterns)
+}
+func (c *tcpxCase) suffixMatch(conn *TCPXConn, value []byte) bool { // value $= patterns
+	return suffixMatch(value, c.patterns)
+}
+func (c *tcpxCase) containMatch(conn *TCPXConn, value []byte) bool { // value *= patterns
+	return containMatch(value, c.patterns)
+}
+func (c *tcpxCase) regexpMatch(conn *TCPXConn, value []byte) bool { // value ~= patterns
+	return regexpMatch(value, c.regexps)
+}
+func (c *tcpxCase) notEqualMatch(conn *TCPXConn, value []byte) bool { // value != patterns
+	return notEqualMatch(value, c.patterns)
+}
+func (c *tcpxCase) notPrefixMatch(conn *TCPXConn, value []byte) bool { // value !^ patterns
+	return notPrefixMatch(value, c.patterns)
+}
+func (c *tcpxCase) notSuffixMatch(conn *TCPXConn, value []byte) bool { // value !$ patterns
+	return notSuffixMatch(value, c.patterns)
+}
+func (c *tcpxCase) notContainMatch(conn *TCPXConn, value []byte) bool { // value !* patterns
+	return notContainMatch(value, c.patterns)
+}
+func (c *tcpxCase) notRegexpMatch(conn *TCPXConn, value []byte) bool { // value !~ patterns
+	return notRegexpMatch(value, c.regexps)
+}
+
+// TCPXDealet
+type TCPXDealet interface {
+	// Imports
+	Component
+	// Methods
+	DealWith(conn *TCPXConn) (dealt bool)
+}
+
+// TCPXDealet_ is a parent.
+type TCPXDealet_ struct { // for all tcpx dealets
+	// Parent
+	dealet_
+	// States
+}
+
+func (d *TCPXDealet_) OnCreate(compName string, stage *Stage) {
+	d.MakeComp(compName)
+	d.stage = stage
 }
 
 // TCPXConn is a TCPX connection coming from TCPXRouter.

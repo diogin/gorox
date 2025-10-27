@@ -16,134 +16,6 @@ import (
 	"github.com/diogin/gorox/hemi/library/gotcp2"
 )
 
-// quixCase
-type quixCase struct {
-	// Parent
-	case_
-	// Assocs
-	router  *QUIXRouter
-	dealets []QUIXDealet
-	// States
-	matcher func(kase *quixCase, conn *QUIXConn, value []byte) bool
-}
-
-func (c *quixCase) onCreate(compName string, router *QUIXRouter) {
-	c.MakeComp(compName)
-	c.router = router
-}
-func (c *quixCase) OnShutdown() { c.router.DecCase() }
-
-func (c *quixCase) OnConfigure() {
-	if c.info == nil {
-		c.general = true
-		return
-	}
-	cond := c.info.(caseCond)
-	c.varCode = cond.varCode
-	c.varName = cond.varName
-	isRegexp := cond.compare == "~=" || cond.compare == "!~"
-	for _, pattern := range cond.patterns {
-		if pattern == "" {
-			UseExitln("empty case cond pattern")
-		}
-		if !isRegexp {
-			c.patterns = append(c.patterns, []byte(pattern))
-		} else if exp, err := regexp.Compile(pattern); err == nil {
-			c.regexps = append(c.regexps, exp)
-		} else {
-			UseExitln(err.Error())
-		}
-	}
-	if matcher, ok := quixCaseMatchers[cond.compare]; ok {
-		c.matcher = matcher
-	} else {
-		UseExitln("unknown compare in case condition")
-	}
-}
-func (c *quixCase) OnPrepare() {
-}
-
-func (c *quixCase) addDealet(dealet QUIXDealet) { c.dealets = append(c.dealets, dealet) }
-
-func (c *quixCase) isMatch(conn *QUIXConn) bool {
-	if c.general {
-		return true
-	}
-	varValue := conn.riskyVariable(c.varCode, c.varName)
-	return c.matcher(c, conn, varValue)
-}
-
-func (c *quixCase) execute(conn *QUIXConn) (dealt bool) {
-	// TODO
-	return false
-}
-
-var quixCaseMatchers = map[string]func(kase *quixCase, conn *QUIXConn, value []byte) bool{
-	"==": (*quixCase).equalMatch,
-	"^=": (*quixCase).prefixMatch,
-	"$=": (*quixCase).suffixMatch,
-	"*=": (*quixCase).containMatch,
-	"~=": (*quixCase).regexpMatch,
-	"!=": (*quixCase).notEqualMatch,
-	"!^": (*quixCase).notPrefixMatch,
-	"!$": (*quixCase).notSuffixMatch,
-	"!*": (*quixCase).notContainMatch,
-	"!~": (*quixCase).notRegexpMatch,
-}
-
-func (c *quixCase) equalMatch(conn *QUIXConn, value []byte) bool { // value == patterns
-	return equalMatch(value, c.patterns)
-}
-func (c *quixCase) prefixMatch(conn *QUIXConn, value []byte) bool { // value ^= patterns
-	return prefixMatch(value, c.patterns)
-}
-func (c *quixCase) suffixMatch(conn *QUIXConn, value []byte) bool { // value $= patterns
-	return suffixMatch(value, c.patterns)
-}
-func (c *quixCase) containMatch(conn *QUIXConn, value []byte) bool { // value *= patterns
-	return containMatch(value, c.patterns)
-}
-func (c *quixCase) regexpMatch(conn *QUIXConn, value []byte) bool { // value ~= patterns
-	return regexpMatch(value, c.regexps)
-}
-func (c *quixCase) notEqualMatch(conn *QUIXConn, value []byte) bool { // value != patterns
-	return notEqualMatch(value, c.patterns)
-}
-func (c *quixCase) notPrefixMatch(conn *QUIXConn, value []byte) bool { // value !^ patterns
-	return notPrefixMatch(value, c.patterns)
-}
-func (c *quixCase) notSuffixMatch(conn *QUIXConn, value []byte) bool { // value !$ patterns
-	return notSuffixMatch(value, c.patterns)
-}
-func (c *quixCase) notContainMatch(conn *QUIXConn, value []byte) bool { // value !* patterns
-	return notContainMatch(value, c.patterns)
-}
-func (c *quixCase) notRegexpMatch(conn *QUIXConn, value []byte) bool { // value !~ patterns
-	return notRegexpMatch(value, c.regexps)
-}
-
-// QUIXDealet
-type QUIXDealet interface {
-	// Imports
-	Component
-	// Methods
-	DealWith(conn *QUIXConn, stream *QUIXStream) (dealt bool)
-}
-
-// QUIXDealet_ is a parent.
-type QUIXDealet_ struct { // for all quix dealets
-	// Parent
-	dealet_
-	// States
-}
-
-func (d *QUIXDealet_) OnCreate(compName string, stage *Stage) {
-	d.MakeComp(compName)
-	d.stage = stage
-}
-
-////////////////////////////////////////////////////////////////
-
 // quixHolder
 type quixHolder interface {
 	// Imports
@@ -445,6 +317,132 @@ func (g *quixGate) serveTLS() {
 func (g *quixGate) justClose(quicConn *gotcp2.Conn) {
 	quicConn.Close()
 	g.DecConn()
+}
+
+// quixCase
+type quixCase struct {
+	// Parent
+	case_
+	// Assocs
+	router  *QUIXRouter
+	dealets []QUIXDealet
+	// States
+	matcher func(kase *quixCase, conn *QUIXConn, value []byte) bool
+}
+
+func (c *quixCase) onCreate(compName string, router *QUIXRouter) {
+	c.MakeComp(compName)
+	c.router = router
+}
+func (c *quixCase) OnShutdown() { c.router.DecCase() }
+
+func (c *quixCase) OnConfigure() {
+	if c.info == nil {
+		c.general = true
+		return
+	}
+	cond := c.info.(caseCond)
+	c.varCode = cond.varCode
+	c.varName = cond.varName
+	isRegexp := cond.compare == "~=" || cond.compare == "!~"
+	for _, pattern := range cond.patterns {
+		if pattern == "" {
+			UseExitln("empty case cond pattern")
+		}
+		if !isRegexp {
+			c.patterns = append(c.patterns, []byte(pattern))
+		} else if exp, err := regexp.Compile(pattern); err == nil {
+			c.regexps = append(c.regexps, exp)
+		} else {
+			UseExitln(err.Error())
+		}
+	}
+	if matcher, ok := quixCaseMatchers[cond.compare]; ok {
+		c.matcher = matcher
+	} else {
+		UseExitln("unknown compare in case condition")
+	}
+}
+func (c *quixCase) OnPrepare() {
+}
+
+func (c *quixCase) addDealet(dealet QUIXDealet) { c.dealets = append(c.dealets, dealet) }
+
+func (c *quixCase) isMatch(conn *QUIXConn) bool {
+	if c.general {
+		return true
+	}
+	varValue := conn.riskyVariable(c.varCode, c.varName)
+	return c.matcher(c, conn, varValue)
+}
+
+func (c *quixCase) execute(conn *QUIXConn) (dealt bool) {
+	// TODO
+	return false
+}
+
+var quixCaseMatchers = map[string]func(kase *quixCase, conn *QUIXConn, value []byte) bool{
+	"==": (*quixCase).equalMatch,
+	"^=": (*quixCase).prefixMatch,
+	"$=": (*quixCase).suffixMatch,
+	"*=": (*quixCase).containMatch,
+	"~=": (*quixCase).regexpMatch,
+	"!=": (*quixCase).notEqualMatch,
+	"!^": (*quixCase).notPrefixMatch,
+	"!$": (*quixCase).notSuffixMatch,
+	"!*": (*quixCase).notContainMatch,
+	"!~": (*quixCase).notRegexpMatch,
+}
+
+func (c *quixCase) equalMatch(conn *QUIXConn, value []byte) bool { // value == patterns
+	return equalMatch(value, c.patterns)
+}
+func (c *quixCase) prefixMatch(conn *QUIXConn, value []byte) bool { // value ^= patterns
+	return prefixMatch(value, c.patterns)
+}
+func (c *quixCase) suffixMatch(conn *QUIXConn, value []byte) bool { // value $= patterns
+	return suffixMatch(value, c.patterns)
+}
+func (c *quixCase) containMatch(conn *QUIXConn, value []byte) bool { // value *= patterns
+	return containMatch(value, c.patterns)
+}
+func (c *quixCase) regexpMatch(conn *QUIXConn, value []byte) bool { // value ~= patterns
+	return regexpMatch(value, c.regexps)
+}
+func (c *quixCase) notEqualMatch(conn *QUIXConn, value []byte) bool { // value != patterns
+	return notEqualMatch(value, c.patterns)
+}
+func (c *quixCase) notPrefixMatch(conn *QUIXConn, value []byte) bool { // value !^ patterns
+	return notPrefixMatch(value, c.patterns)
+}
+func (c *quixCase) notSuffixMatch(conn *QUIXConn, value []byte) bool { // value !$ patterns
+	return notSuffixMatch(value, c.patterns)
+}
+func (c *quixCase) notContainMatch(conn *QUIXConn, value []byte) bool { // value !* patterns
+	return notContainMatch(value, c.patterns)
+}
+func (c *quixCase) notRegexpMatch(conn *QUIXConn, value []byte) bool { // value !~ patterns
+	return notRegexpMatch(value, c.regexps)
+}
+
+// QUIXDealet
+type QUIXDealet interface {
+	// Imports
+	Component
+	// Methods
+	DealWith(conn *QUIXConn, stream *QUIXStream) (dealt bool)
+}
+
+// QUIXDealet_ is a parent.
+type QUIXDealet_ struct { // for all quix dealets
+	// Parent
+	dealet_
+	// States
+}
+
+func (d *QUIXDealet_) OnCreate(compName string, stage *Stage) {
+	d.MakeComp(compName)
+	d.stage = stage
 }
 
 // QUIXConn is a QUIX connection coming from QUIXRouter.

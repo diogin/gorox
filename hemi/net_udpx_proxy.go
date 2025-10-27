@@ -37,10 +37,10 @@ func (d *udpxProxy) OnConfigure() {
 		if compName, ok := v.String(); ok && compName != "" {
 			if backend := d.stage.Backend(compName); backend == nil {
 				UseExitf("unknown backend: '%s'\n", compName)
-			} else if udpxBackend, ok := backend.(*UDPXBackend); ok {
-				d.backend = udpxBackend
-			} else {
+			} else if udpxBackend, ok := backend.(*UDPXBackend); !ok {
 				UseExitf("incorrect backend '%s' for udpxProxy\n", compName)
+			} else {
+				d.backend = udpxBackend
 			}
 		} else {
 			UseExitln("invalid toBackend")

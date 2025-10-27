@@ -117,6 +117,11 @@ To uninstall, simply remove the whole Gorox directory and remove it from $PATH.
 Configuration examples
 ----------------------
 
+Gorox uses "conf/gorox.conf" as default config file. This means gorox is started
+like this by default:
+
+    shell> ./gorox -config conf/gorox.conf
+
 We provide some example configs for Gorox to use, see them under conf/examples.
 For example, if you would like to use Gorox as an HTTP reverse proxy, there is a
 demo config in conf/examples/http_proxy.conf, you can modify it and start Gorox

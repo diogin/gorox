@@ -37,10 +37,10 @@ func (d *quixProxy) OnConfigure() {
 		if compName, ok := v.String(); ok && compName != "" {
 			if backend := d.stage.Backend(compName); backend == nil {
 				UseExitf("unknown backend: '%s'\n", compName)
-			} else if quixBackend, ok := backend.(*QUIXBackend); ok {
-				d.backend = quixBackend
-			} else {
+			} else if quixBackend, ok := backend.(*QUIXBackend); !ok {
 				UseExitf("incorrect backend '%s' for quixProxy\n", compName)
+			} else {
+				d.backend = quixBackend
 			}
 		} else {
 			UseExitln("invalid toBackend")
