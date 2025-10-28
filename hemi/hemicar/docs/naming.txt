@@ -29,7 +29,7 @@ COMPONENTS
     router (quixRouter, tcpxRouter, udpxRouter)
       dealet (quixProxy, tcpxProxy, udpxProxy, ...)
       [case]
-    [service]
+    [rpcsvc]
     hstate (filesysHstate, redisHstate, ...)
     hcache (filesysHcache, memoryHcache, ...)
     [webapp]

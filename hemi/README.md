@@ -119,7 +119,7 @@ process might looks like this:
    |     | [udpx] +--------------+-----------------+ r |     |
    |     | router |              | webapp(*)  rule | v |     |
    |     |        |              | handlet reviser | e |     |
-   |     |  case  |  service(*)  |     socklet     | r |     |
+   |     |  case  |  rpcsvc(*)   |     socklet     | r |     |
    |     | dealet |              +------+   +------+(*)|     |
    |     |        |              |hstate|   |hcache|   |     |
    |     +--------+--------------+------+---+------+---+     |

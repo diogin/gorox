@@ -1,5 +1,5 @@
 package svcs
 
-import ( // import your services
+import ( // import your rpcsvcs
 	_ "myprg/svcs/mysvc"
 )

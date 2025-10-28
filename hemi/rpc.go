@@ -16,12 +16,12 @@ import (
 	"time"
 )
 
-// Service is the RPC service.
-type Service struct {
+// Rpcsvc is the RPC service.
+type Rpcsvc struct {
 	// Parent
 	Component_
 	// Mixins
-	_accessLogger_ // services can log accesses
+	_accessLogger_ // rpcsvcs can log accesses
 	// Assocs
 	stage   *Stage        // current stage
 	servers []*hrpcServer // bound hrpc servers. may be empty
@@ -34,13 +34,13 @@ type Service struct {
 	bundlets        map[string]Bundlet // ...
 }
 
-func (s *Service) onCreate(compName string, stage *Stage) {
+func (s *Rpcsvc) onCreate(compName string, stage *Stage) {
 	s.MakeComp(compName)
 	s.stage = stage
 }
-func (s *Service) OnShutdown() { close(s.ShutChan) } // notifies maintain() which shutdown sub components
+func (s *Rpcsvc) OnShutdown() { close(s.ShutChan) } // notifies maintain() which shutdown sub components
 
-func (s *Service) OnConfigure() {
+func (s *Rpcsvc) OnConfigure() {
 	s._accessLogger_.onConfigure(s)
 
 	// .maxContentSize
@@ -51,39 +51,39 @@ func (s *Service) OnConfigure() {
 		return errors.New(".maxContentSize has an invalid value")
 	}, _16M)
 }
-func (s *Service) OnPrepare() {
+func (s *Rpcsvc) OnPrepare() {
 	s._accessLogger_.onPrepare(s)
 
 	initsLock.RLock()
-	serviceInit := serviceInits[s.compName]
+	rpcsvcInit := rpcsvcInits[s.compName]
 	initsLock.RUnlock()
-	if serviceInit != nil {
-		if err := serviceInit(s); err != nil {
+	if rpcsvcInit != nil {
+		if err := rpcsvcInit(s); err != nil {
 			UseExitln(err.Error())
 		}
 	}
 }
 
-func (s *Service) maintain() { // runner
+func (s *Rpcsvc) maintain() { // runner
 	s.LoopRun(time.Second, func(now time.Time) {
 		// TODO
 	})
 	s.CloseLog()
 	if DebugLevel() >= 2 {
-		Printf("service=%s done\n", s.CompName())
+		Printf("rpcsvc=%s done\n", s.CompName())
 	}
-	s.stage.DecService()
+	s.stage.DecRpcsvc()
 }
 
-func (s *Service) bindServer(server *hrpcServer) { s.servers = append(s.servers, server) }
+func (s *Rpcsvc) bindServer(server *hrpcServer) { s.servers = append(s.servers, server) }
 
 /*
-func (s *Service) dispatch(call) {
+func (s *Rpcsvc) dispatch(call) {
 	// TODO
 }
 */
 
-// Bundlet is a collection of related procedures in a service. A service has many bundlets.
+// Bundlet is a collection of related procedures in a rpcsvc. A rpcsvc has many bundlets.
 // Bundlets are not components.
 type Bundlet interface {
 }
@@ -136,15 +136,15 @@ type hrpcServer struct {
 	// Mixins
 	_hrpcHolder_ // to carry configs used by gates
 	// Assocs
-	defaultService *Service // default service if not found
+	defaultRpcsvc *Rpcsvc // default rpcsvc if not found
 	// States
-	services                  []string                // for what services
-	exactServices             []*hostnameTo[*Service] // like: ("example.com")
-	suffixServices            []*hostnameTo[*Service] // like: ("*.example.com")
-	prefixServices            []*hostnameTo[*Service] // like: ("www.example.*")
-	recvTimeout               time.Duration           // timeout to recv the whole message content. zero means no timeout
-	sendTimeout               time.Duration           // timeout to send the whole message. zero means no timeout
-	maxConcurrentConnsPerGate int32                   // max concurrent connections allowed per gate
+	rpcsvcs                   []string               // for what rpcsvcs
+	exactRpcsvcs              []*hostnameTo[*Rpcsvc] // like: ("example.com")
+	suffixRpcsvcs             []*hostnameTo[*Rpcsvc] // like: ("*.example.com")
+	prefixRpcsvcs             []*hostnameTo[*Rpcsvc] // like: ("www.example.*")
+	recvTimeout               time.Duration          // timeout to recv the whole message content. zero means no timeout
+	sendTimeout               time.Duration          // timeout to send the whole message. zero means no timeout
+	maxConcurrentConnsPerGate int32                  // max concurrent connections allowed per gate
 }
 
 func (s *hrpcServer) onCreate(compName string, stage *Stage) {
@@ -155,8 +155,8 @@ func (s *hrpcServer) OnConfigure() {
 	s.Server_.OnConfigure()
 	s._hrpcHolder_.onConfigure(s)
 
-	// .services
-	s.ConfigureStringList("services", &s.services, nil, []string{})
+	// .rpcsvcs
+	s.ConfigureStringList("rpcsvcs", &s.rpcsvcs, nil, []string{})
 
 	// .recvTimeout
 	s.ConfigureDuration("recvTimeout", &s.recvTimeout, func(value time.Duration) error {
@@ -189,42 +189,42 @@ func (s *hrpcServer) OnPrepare() {
 
 func (s *hrpcServer) MaxConcurrentConnsPerGate() int32 { return s.maxConcurrentConnsPerGate }
 
-func (s *hrpcServer) bindServices() {
-	for _, serviceName := range s.services {
-		service := s.stage.Service(serviceName)
-		if service == nil {
+func (s *hrpcServer) bindRpcsvcs() {
+	for _, rpcsvcName := range s.rpcsvcs {
+		rpcsvc := s.stage.Rpcsvc(rpcsvcName)
+		if rpcsvc == nil {
 			continue
 		}
-		service.bindServer(s)
+		rpcsvc.bindServer(s)
 		// TODO: use hash table?
-		for _, hostname := range service.exactHostnames {
-			s.exactServices = append(s.exactServices, &hostnameTo[*Service]{hostname, service})
+		for _, hostname := range rpcsvc.exactHostnames {
+			s.exactRpcsvcs = append(s.exactRpcsvcs, &hostnameTo[*Rpcsvc]{hostname, rpcsvc})
 		}
 		// TODO: use radix trie?
-		for _, hostname := range service.suffixHostnames {
-			s.suffixServices = append(s.suffixServices, &hostnameTo[*Service]{hostname, service})
+		for _, hostname := range rpcsvc.suffixHostnames {
+			s.suffixRpcsvcs = append(s.suffixRpcsvcs, &hostnameTo[*Rpcsvc]{hostname, rpcsvc})
 		}
 		// TODO: use radix trie?
-		for _, hostname := range service.prefixHostnames {
-			s.prefixServices = append(s.prefixServices, &hostnameTo[*Service]{hostname, service})
+		for _, hostname := range rpcsvc.prefixHostnames {
+			s.prefixRpcsvcs = append(s.prefixRpcsvcs, &hostnameTo[*Rpcsvc]{hostname, rpcsvc})
 		}
 	}
 }
-func (s *hrpcServer) findService(hostname []byte) *Service {
+func (s *hrpcServer) findRpcsvc(hostname []byte) *Rpcsvc {
 	// TODO: use hash table?
-	for _, exactMap := range s.exactServices {
+	for _, exactMap := range s.exactRpcsvcs {
 		if bytes.Equal(hostname, exactMap.hostname) {
 			return exactMap.target
 		}
 	}
 	// TODO: use radix trie?
-	for _, suffixMap := range s.suffixServices {
+	for _, suffixMap := range s.suffixRpcsvcs {
 		if bytes.HasSuffix(hostname, suffixMap.hostname) {
 			return suffixMap.target
 		}
 	}
 	// TODO: use radix trie?
-	for _, prefixMap := range s.prefixServices {
+	for _, prefixMap := range s.prefixRpcsvcs {
 		if bytes.HasPrefix(hostname, prefixMap.hostname) {
 			return prefixMap.target
 		}

@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	RegisterServiceInit("hello", func(service *Service) error {
+	RegisterRpcsvcInit("hello", func(rpcsvc *Rpcsvc) error {
 		return nil
 	})
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	RegisterServiceInit("hemisvc", func(service *Service) error {
+	RegisterRpcsvcInit("hemisvc", func(rpcsvc *Rpcsvc) error {
 		return nil
 	})
 }

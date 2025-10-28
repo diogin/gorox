@@ -11,7 +11,7 @@ worker 进程
   多个 router.serve() 并发
     每个 router 有多个 gate.serve() 并发
       每个 gate 有多个 gate.router.serveConn(conn) 并发
-  多个 service.maintain() 并发
+  多个 rpcsvc.maintain() 并发
   多个 hstate.Maintain() 并发
   多个 hcache.Maintain() 并发
   多个 webapp.maintain() 并发

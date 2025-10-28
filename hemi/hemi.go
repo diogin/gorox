@@ -117,7 +117,7 @@ const ( // list of component types
 	compTypeFixture
 	compTypeBackend
 	compTypeNode
-	compTypeService
+	compTypeRpcsvc
 	compTypeHstate
 	compTypeHcache
 	compTypeWebapp
@@ -139,7 +139,7 @@ const ( // list of component types
 var signedComps = map[string]int16{ // signed comps. more dynamic comps are signed using _signComp() below
 	"stage":      compTypeStage,
 	"node":       compTypeNode,
-	"service":    compTypeService,
+	"rpcsvc":     compTypeRpcsvc,
 	"webapp":     compTypeWebapp,
 	"rule":       compTypeRule,
 	"quixRouter": compTypeQUIXRouter,
@@ -235,15 +235,15 @@ func _registerComponent1[T Component, C Component](compSign string, compType int
 	_signComp(compSign, compType)
 }
 
-var ( // initializers of services & webapps
-	initsLock    sync.RWMutex
-	serviceInits = make(map[string]func(service *Service) error) // indexed by compName, same below.
-	webappInits  = make(map[string]func(webapp *Webapp) error)
+var ( // initializers of rpcsvcs & webapps
+	initsLock   sync.RWMutex
+	rpcsvcInits = make(map[string]func(rpcsvc *Rpcsvc) error) // indexed by compName, same below.
+	webappInits = make(map[string]func(webapp *Webapp) error)
 )
 
-func RegisterServiceInit(serviceName string, init func(service *Service) error) {
+func RegisterRpcsvcInit(rpcsvcName string, init func(rpcsvc *Rpcsvc) error) {
 	initsLock.Lock()
-	serviceInits[serviceName] = init
+	rpcsvcInits[rpcsvcName] = init
 	initsLock.Unlock()
 }
 func RegisterWebappInit(webappName string, init func(webapp *Webapp) error) {
@@ -422,7 +422,7 @@ type Stage struct {
 	resolv      *resolvFixture        // for fast accessing
 	fixtures    compDict[fixture]     // indexed by compSign
 	backends    compDict[Backend]     // indexed by compName
-	services    compDict[*Service]    // indexed by compName
+	rpcsvcs     compDict[*Rpcsvc]     // indexed by compName
 	hstates     compDict[Hstate]      // indexed by compName
 	hcaches     compDict[Hcache]      // indexed by compName
 	webapps     compDict[*Webapp]     // indexed by compName
@@ -461,7 +461,7 @@ func (s *Stage) onCreate() {
 	s.fixtures[signResolv] = s.resolv
 
 	s.backends = make(compDict[Backend])
-	s.services = make(compDict[*Service])
+	s.rpcsvcs = make(compDict[*Rpcsvc])
 	s.hstates = make(compDict[Hstate])
 	s.hcaches = make(compDict[Hcache])
 	s.webapps = make(compDict[*Webapp])
@@ -504,9 +504,9 @@ func (s *Stage) OnShutdown() {
 	s.hstates.goWalk(Hstate.OnShutdown)
 	s.subs.Wait()
 
-	// Services
-	s.subs.Add(len(s.services))
-	s.services.goWalk((*Service).OnShutdown)
+	// Rpcsvcs
+	s.subs.Add(len(s.rpcsvcs))
+	s.rpcsvcs.goWalk((*Rpcsvc).OnShutdown)
 	s.subs.Wait()
 
 	// Backends
@@ -581,7 +581,7 @@ func (s *Stage) OnConfigure() {
 	// sub components
 	s.fixtures.walk(fixture.OnConfigure)
 	s.backends.walk(Backend.OnConfigure)
-	s.services.walk((*Service).OnConfigure)
+	s.rpcsvcs.walk((*Rpcsvc).OnConfigure)
 	s.hstates.walk(Hstate.OnConfigure)
 	s.hcaches.walk(Hcache.OnConfigure)
 	s.webapps.walk((*Webapp).OnConfigure)
@@ -601,7 +601,7 @@ func (s *Stage) OnPrepare() {
 	// sub components
 	s.fixtures.walk(fixture.OnPrepare)
 	s.backends.walk(Backend.OnPrepare)
-	s.services.walk((*Service).OnPrepare)
+	s.rpcsvcs.walk((*Rpcsvc).OnPrepare)
 	s.hstates.walk(Hstate.OnPrepare)
 	s.hcaches.walk(Hcache.OnPrepare)
 	s.webapps.walk((*Webapp).OnPrepare)
@@ -625,15 +625,15 @@ func (s *Stage) createBackend(compSign string, compName string) Backend {
 	s.backends[compName] = backend
 	return backend
 }
-func (s *Stage) createService(compName string) *Service {
-	if s.Service(compName) != nil {
-		UseExitf("conflicting service with a same component name '%s'\n", compName)
+func (s *Stage) createRpcsvc(compName string) *Rpcsvc {
+	if s.Rpcsvc(compName) != nil {
+		UseExitf("conflicting rpcsvc with a same component name '%s'\n", compName)
 	}
-	service := new(Service)
-	service.onCreate(compName, s)
-	service.setShell(service)
-	s.services[compName] = service
-	return service
+	rpcsvc := new(Rpcsvc)
+	rpcsvc.onCreate(compName, s)
+	rpcsvc.setShell(rpcsvc)
+	s.rpcsvcs[compName] = rpcsvc
+	return rpcsvc
 }
 func (s *Stage) createHstate(compSign string, compName string) Hstate {
 	if s.Hstate(compName) != nil {
@@ -730,7 +730,7 @@ func (s *Stage) createCronjob(compSign string, compName string) Cronjob {
 
 func (s *Stage) decFixture() { s.subs.Done() }
 func (s *Stage) DecBackend() { s.subs.Done() }
-func (s *Stage) DecService() { s.subs.Done() }
+func (s *Stage) DecRpcsvc()  { s.subs.Done() }
 func (s *Stage) DecHstate()  { s.subs.Done() }
 func (s *Stage) DecHcache()  { s.subs.Done() }
 func (s *Stage) DecWebapp()  { s.subs.Done() }
@@ -744,7 +744,7 @@ func (s *Stage) Resolv() *resolvFixture { return s.resolv }
 
 func (s *Stage) Fixture(compSign string) fixture        { return s.fixtures[compSign] }
 func (s *Stage) Backend(compName string) Backend        { return s.backends[compName] }
-func (s *Stage) Service(compName string) *Service       { return s.services[compName] }
+func (s *Stage) Rpcsvc(compName string) *Rpcsvc         { return s.rpcsvcs[compName] }
 func (s *Stage) Hstate(compName string) Hstate          { return s.hstates[compName] }
 func (s *Stage) Hcache(compName string) Hcache          { return s.hcaches[compName] }
 func (s *Stage) Webapp(compName string) *Webapp         { return s.webapps[compName] }
@@ -793,13 +793,13 @@ func (s *Stage) Start(id int32) {
 		UseExitln(err.Error())
 	}
 
-	// Bind services and webapps to servers
+	// Bind rpcsvcs and webapps to servers
 	if DebugLevel() >= 1 {
-		Println("bind services and webapps to servers")
+		Println("bind rpcsvcs and webapps to servers")
 	}
 	for _, server := range s.servers {
 		if rpcServer, ok := server.(*hrpcServer); ok {
-			rpcServer.bindServices()
+			rpcServer.bindRpcsvcs()
 		} else if webServer, ok := server.(HTTPServer); ok {
 			webServer.bindWebapps()
 		}
@@ -813,7 +813,7 @@ func (s *Stage) Start(id int32) {
 	// Start all components in current stage
 	s.startFixtures() // go fixture.run()
 	s.startBackends() // go backend.Maintain()
-	s.startServices() // go service.maintain()
+	s.startRpcsvcs()  // go rpcsvc.maintain()
 	s.startHstates()  // go hstate.Maintain()
 	s.startHcaches()  // go hcache.Maintain()
 	s.startWebapps()  // go webapp.maintain()
@@ -869,12 +869,12 @@ func (s *Stage) startBackends() {
 		go backend.Maintain()
 	}
 }
-func (s *Stage) startServices() {
-	for _, service := range s.services {
+func (s *Stage) startRpcsvcs() {
+	for _, rpcsvc := range s.rpcsvcs {
 		if DebugLevel() >= 1 {
-			Printf("service=%s go maintain()\n", service.CompName())
+			Printf("rpcsvc=%s go maintain()\n", rpcsvc.CompName())
 		}
-		go service.maintain()
+		go rpcsvc.maintain()
 	}
 }
 func (s *Stage) startHstates() {

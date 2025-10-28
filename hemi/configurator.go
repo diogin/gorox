@@ -246,8 +246,8 @@ func (c *configurator) parseStage(stage *Stage) { // stage {}
 			c.parseTCPXRouter(stage)
 		case compTypeUDPXRouter:
 			c.parseUDPXRouter(stage)
-		case compTypeService:
-			c.parseService(current, stage)
+		case compTypeRpcsvc:
+			c.parseRpcsvc(current, stage)
 		case compTypeHstate:
 			c.parseHstate(current, stage)
 		case compTypeHcache:
@@ -513,12 +513,12 @@ func (c *configurator) _parseCaseCond(kase interface{ setInfo(info any) }) {
 	cond.compare = compare.text
 	kase.setInfo(cond)
 }
-func (c *configurator) parseService(compSign *token, stage *Stage) { // service <compName> {}
+func (c *configurator) parseRpcsvc(compSign *token, stage *Stage) { // rpcsvc <compName> {}
 	compName := c.forwardExpectToken(tokenString)
-	service := stage.createService(compName.text)
-	service.setParent(stage)
+	rpcsvc := stage.createRpcsvc(compName.text)
+	rpcsvc.setParent(stage)
 	c.forwardToken()
-	c._parseLeaf(service)
+	c._parseLeaf(rpcsvc)
 }
 func (c *configurator) parseHstate(compSign *token, stage *Stage) { // xxxHstate <compName> {}
 	parseComponent0(c, compSign, stage, stage.createHstate)

@@ -493,7 +493,7 @@ func (s *_contentSaver_) MaxContentSize() int64       { return s.maxContentSize 
 func (s *_contentSaver_) SaveContentFilesDir() string { return s.saveContentFilesDir } // must ends with '/'
 
 // _accessLogger_ is a mixin.
-type _accessLogger_ struct { // for router_, Webapp, and Service
+type _accessLogger_ struct { // for router_, Webapp, and Rpcsvc
 	// States
 	useLogger string    // "noop", "simple", ...
 	logConfig LogConfig // used to configure logger
@@ -740,7 +740,7 @@ func (p *connPool[C]) closeIdle() int {
 // hostnameTo
 type hostnameTo[T Component] struct {
 	hostname []byte // "example.com" for exact map, ".example.com" for suffix map, "www.example." for prefix map
-	target   T      // service or webapp
+	target   T      // rpcsvc or webapp
 }
 
 // tempFile is used to temporarily save incoming content in local file system.
