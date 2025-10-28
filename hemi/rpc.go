@@ -27,11 +27,11 @@ type Rpcsvc struct {
 	servers []*hrpcServer // bound hrpc servers. may be empty
 	// States
 	hostnames       [][]byte           // ...
-	maxContentSize  int64              // max content size allowed
 	exactHostnames  [][]byte           // like: ("example.com")
 	suffixHostnames [][]byte           // like: ("*.example.com")
 	prefixHostnames [][]byte           // like: ("www.example.*")
-	bundlets        map[string]Bundlet // ...
+	maxContentSize  int64              // max content size allowed
+	bundlets        map[string]Bundlet // registered bundlets. indexed by name
 }
 
 func (s *Rpcsvc) onCreate(compName string, stage *Stage) {
@@ -75,15 +75,20 @@ func (s *Rpcsvc) maintain() { // runner
 	s.stage.DecRpcsvc()
 }
 
+func (s *Rpcsvc) RegisterBundlet(name string, bundlet Bundlet) {
+	if s.bundlets[name] != nil {
+		UseExitln("conflicting bundlet with a same name in rpcsvc")
+	}
+	s.bundlets[name] = bundlet
+}
+
 func (s *Rpcsvc) bindServer(server *hrpcServer) { s.servers = append(s.servers, server) }
 
-/*
-func (s *Rpcsvc) dispatch(call) {
+func (s *Rpcsvc) dispatchCall(call *hrpcCall) {
 	// TODO
 }
-*/
 
-// Bundlet is a collection of related procedures in a rpcsvc. A rpcsvc has many bundlets.
+// Bundlet is a collection of related procedures in an rpcsvc. An rpcsvc has many bundlets.
 // Bundlets are not components.
 type Bundlet interface {
 }
