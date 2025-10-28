@@ -38,6 +38,10 @@ type udpxConn interface {
 	ID() int64
 	Holder() udpxHolder
 	UDSMode() bool
+	MakeTempName(dst []byte, unixTime int64) int
+	RemoteAddr() net.Addr
+	markBroken()
+	isBroken() bool
 }
 
 // udpxConn_ is a parent.
@@ -80,6 +84,13 @@ func (c *udpxConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
 	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
 
+func (c *udpxConn_[H]) RemoteAddr() net.Addr {
+	if c.UDSMode() {
+		return nil // TODO: use a predefined variable to avoid nil pointer dereference?
+	}
+	return c.pktConn.(*net.UDPConn).RemoteAddr()
+}
+
 func (c *udpxConn_[H]) markBroken()    { c.broken.Store(true) }
 func (c *udpxConn_[H]) isBroken() bool { return c.broken.Load() }
 
@@ -90,7 +101,7 @@ func (c *udpxConn_[H]) ReadFrom(dst []byte) (n int, addr net.Addr, err error) {
 	return c.pktConn.ReadFrom(dst)
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // UDPXRouter
 type UDPXRouter struct {
@@ -432,7 +443,7 @@ var udpxConnVariables = [...]func(*UDPXConn) []byte{ // keep sync with varCodes
 	2: nil, // udsMode
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 func init() {
 	RegisterBackend("udpxBackend", func(compName string, stage *Stage) Backend {

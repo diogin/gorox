@@ -79,7 +79,7 @@ func (h *_holder_) TLSConfig() *tls.Config      { return h.tlsConfig }
 func (h *_holder_) ReadTimeout() time.Duration  { return h.readTimeout }
 func (h *_holder_) WriteTimeout() time.Duration { return h.writeTimeout }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // Server component. A Server has a group of Gates.
 type Server interface {
@@ -224,7 +224,7 @@ func (g *Gate_[S]) IncConn()   { g.subs.Add(1) }
 func (g *Gate_[S]) DecConn()   { g.subs.Done() }
 func (g *Gate_[S]) WaitConns() { g.subs.Wait() }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // Backend component. A Backend is a group of nodes.
 type Backend interface {
@@ -426,7 +426,7 @@ func (n *Node_[B]) DecConn()          { n.subs.Done() }
 func (n *Node_[B]) DecConns(size int) { n.subs.Add(-size) }
 func (n *Node_[B]) WaitConns()        { n.subs.Wait() }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // contentSaver
 type contentSaver interface { // for _contentSaver_
@@ -783,6 +783,11 @@ var varCodes = map[string]int16{ // TODO
 	"queryString": 8, // ?x=y, ?y=z&z=%ff, ?z
 	"contentType": 9, // application/json
 }
+
+var (
+	varValueTrue  = "true"
+	varValueFalse = "false"
+)
 
 // fakeFile
 var fakeFile _fakeFile

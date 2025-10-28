@@ -25,6 +25,10 @@ func DialTimeout(address string, timeout time.Duration) (*Conn, error) {
 	return nil, nil
 }
 
+func (c *Conn) RemoteAddr() net.Addr {
+	return nil
+}
+
 func (c *Conn) CreateStream() (*Stream, error) {
 	stream := new(Stream)
 	stream.conn = c

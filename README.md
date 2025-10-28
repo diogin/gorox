@@ -8,7 +8,7 @@ used as a:
 
   * Web Server (HTTP, TLS, WebSocket, static, CGI, FCGI)
   * Go Web Application Server (Frameworks, Applications)
-  * RPC Framework for Go (HRPC)
+  * RPC Framework for Go (HRPC, both client and server)
   * Web Reverse Proxy (HTTP, TLS, WebSocket, Caching, Load Balancing)
   * Layer 7 Reverse Proxy (Various Protocols, with or without Load Balancing)
   * Layer 4 Reverse Proxy (TCP, TLS, UDP, QUIC, UDS, Load Balancing)
@@ -52,8 +52,9 @@ you prefer to build it from source, please read on.
 Using Gorox as a Webapp Server or RPC Framework
 -----------------------------------------------
 
-When using Gorox as a Webapp Server or RPC Framework, you have to build it from
-source. Before building, please ensure you have Go >= 1.22 installed:
+When using Gorox as a Webapp Server or RPC Framework, or you don't like the
+official binary distribution, you have to build it from source. Before building,
+please ensure you have Go >= 1.22 installed:
 
     shell> go version
 

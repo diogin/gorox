@@ -8,6 +8,7 @@ package hemi
 
 import (
 	"errors"
+	"net"
 	"regexp"
 	"sync"
 	"sync/atomic"
@@ -62,6 +63,7 @@ type quixConn interface {
 	UDSMode() bool
 	TLSMode() bool
 	MakeTempName(dst []byte, unixTime int64) int
+	RemoteAddr() net.Addr
 	markBroken()
 	isBroken() bool
 }
@@ -111,6 +113,8 @@ func (c *quixConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
 	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
 
+func (c *quixConn_[H]) RemoteAddr() net.Addr { return c.quicConn.RemoteAddr() }
+
 func (c *quixConn_[H]) markBroken()    { c.broken.Store(true) }
 func (c *quixConn_[H]) isBroken() bool { return c.broken.Load() }
 
@@ -136,7 +140,7 @@ func (s *quixStream_) onEnd() {
 	s.quicStream = nil
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // QUIXRouter
 type QUIXRouter struct {
@@ -542,7 +546,7 @@ func (s *QUIXStream) Read(dst []byte) (n int, err error) {
 	return
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 func init() {
 	RegisterBackend("quixBackend", func(compName string, stage *Stage) Backend {

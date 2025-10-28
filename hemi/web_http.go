@@ -104,12 +104,10 @@ func (c *httpConn_[H]) onPut() {
 	c.counter.Store(0)
 }
 
-func (c *httpConn_[H]) ID() int64 { return c.id }
-
+func (c *httpConn_[H]) ID() int64          { return c.id }
 func (c *httpConn_[H]) Holder() httpHolder { return c.holder }
-
-func (c *httpConn_[H]) UDSMode() bool { return c.holder.UDSMode() }
-func (c *httpConn_[H]) TLSMode() bool { return c.holder.TLSMode() }
+func (c *httpConn_[H]) UDSMode() bool      { return c.holder.UDSMode() }
+func (c *httpConn_[H]) TLSMode() bool      { return c.holder.TLSMode() }
 func (c *httpConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
 	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
@@ -244,7 +242,7 @@ type _httpIn0 struct { // for fast reset, entirely
 	iContentRange     uint8   // index of content-range header line in r.primes
 	iContentType      uint8   // index of content-type header line in r.primes
 	iDate             uint8   // index of date header line in r.primes
-	_                 [3]byte // padding
+	_                 [3]byte // padding, can be used by iXXX or zXXX
 	zAccept           zone    // zone of accept header lines in r.primes. may not be continuous
 	zAcceptEncoding   zone    // zone of accept-encoding header lines in r.primes. may not be continuous
 	zCacheControl     zone    // zone of cache-control header lines in r.primes. may not be continuous
@@ -257,7 +255,7 @@ type _httpIn0 struct { // for fast reset, entirely
 	zTransferEncoding zone    // zone of transfer-encoding header lines in r.primes. may not be continuous
 	zUpgrade          zone    // zone of upgrade header lines in r.primes. may not be continuous
 	zVia              zone    // zone of via header lines in r.primes. may not be continuous
-	contentReceived   bool    // is the content received? true if the message has no content or the content is received, otherwise false
+	contentReceived   bool    // is the content received? true if the message has no content or the content is received, false otherwise
 	contentTextKind   int8    // kind of current r.contentText if it is text. see httpContentTextXXX
 	receivedSize      int64   // bytes of currently received content. used and calculated by both sized & vague content receiver when receiving
 	chunkSize         int64   // left size of current chunk if the chunk is too large to receive in one call. HTTP/1.1 chunked only
@@ -1635,7 +1633,7 @@ type _httpOut_ struct { // for backendRequest_ and serverResponse_. outgoing mes
 	// Stream states (non-zeros)
 	output           []byte        // bytes of the outgoing header fields or trailer fields which are not manipulated at the same time. [<r.stockOutput>/4K/16K]
 	sendTimeout      time.Duration // timeout to send the whole message. zero means no timeout
-	contentSize      int64         // info of outgoing content. -1: not set, -2: vague, >=0: size
+	contentSize      int64         // size of outgoing content. -1: not set, -2: vague, >=0: size
 	httpVersion      uint8         // Version1_1, Version2, Version3
 	asRequest        bool          // treat this outgoing message as request?
 	numHeaderFields  uint8         // 1+num of added header fields, starts from 1 because edges[0] is not used
@@ -2108,7 +2106,7 @@ var ( // _httpSocket_ errors
 	httpSocketWriteBroken = errors.New("write broken")
 )
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // HTTPServer is the http server.
 type HTTPServer interface { // for *http[x3]Server
@@ -5143,7 +5141,7 @@ func (s *serverSocket_) onEnd() {
 func (s *serverSocket_) serverTodo() {
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // HTTPBackend is the http backend.
 type HTTPBackend interface { // for *HTTP[1-3]Backend
@@ -5982,7 +5980,7 @@ func (s *backendSocket_) onEnd() {
 func (s *backendSocket_) backendTodo() {
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 const ( // basic http constants
 	// version codes

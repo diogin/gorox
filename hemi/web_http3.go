@@ -64,7 +64,7 @@ func (c *http3Conn_[H, S]) onPut() {
 	c.httpConn_.onPut()
 }
 
-func (c *http3Conn_[H, S]) remoteAddr() net.Addr { return nil } // TODO
+func (c *http3Conn_[H, S]) remoteAddr() net.Addr { return c.quicConn.RemoteAddr() }
 
 // http3Stream
 type http3Stream interface { // for *backend3Stream and *server3Stream
@@ -295,7 +295,7 @@ func (s *_http3Socket_) todo3() {
 	s.todo()
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 func init() {
 	RegisterServer("http3Server", func(compName string, stage *Stage) Server {
@@ -690,7 +690,7 @@ func (s *server3Socket) serverTodo3() {
 	s.so3.todo3()
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 func init() {
 	RegisterBackend("http3Backend", func(compName string, stage *Stage) Backend {
@@ -1023,7 +1023,7 @@ func (s *backend3Socket) backendTodo3() {
 	s.so3.todo3()
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 const ( // HTTP/3 sizes and limits for both of our HTTP/3 server and HTTP/3 backend
 	http3MaxTableSize         = _4K

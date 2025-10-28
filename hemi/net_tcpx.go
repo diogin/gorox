@@ -46,6 +46,7 @@ type tcpxConn interface {
 	UDSMode() bool
 	TLSMode() bool
 	MakeTempName(dst []byte, unixTime int64) int
+	RemoteAddr() net.Addr
 	markBroken()
 	isBroken() bool
 }
@@ -108,6 +109,8 @@ func (c *tcpxConn_[H]) MakeTempName(dst []byte, unixTime int64) int {
 	return makeTempName(dst, c.holder.Stage().ID(), unixTime, c.id, c.counter.Add(1))
 }
 
+func (c *tcpxConn_[H]) RemoteAddr() net.Addr { return c.netConn.RemoteAddr() }
+
 func (c *tcpxConn_[H]) markBroken()    { c.broken.Store(true) }
 func (c *tcpxConn_[H]) isBroken() bool { return c.broken.Load() }
 
@@ -144,7 +147,7 @@ func (c *tcpxConn_[H]) SendVector() (err error) {
 	return
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // TCPXRouter
 type TCPXRouter struct {
@@ -607,6 +610,15 @@ func (c *TCPXConn) onPut() {
 	c.tcpxConn_.onPut()
 }
 
+func (c *TCPXConn) RiskySrcHost() []byte {
+	// TODO
+	return nil
+}
+func (c *TCPXConn) RiskySrcPort() []byte {
+	// TODO
+	return nil
+}
+
 func (c *TCPXConn) CloseRead() {
 	c._checkClose()
 }
@@ -637,15 +649,15 @@ func (c *TCPXConn) riskyVariable(varCode int16, varName string) (varValue []byte
 // tcpxConnVariables
 var tcpxConnVariables = [...]func(*TCPXConn) []byte{ // keep sync with varCodes
 	// TODO
-	0: nil, // srcHost
-	1: nil, // srcPort
-	2: nil, // udsMode
-	3: nil, // tlsMode
-	4: nil, // serverName
-	5: nil, // nextProto
+	0: (*TCPXConn).RiskySrcHost, // srcHost
+	1: (*TCPXConn).RiskySrcPort, // srcPort
+	2: nil,                      // udsMode
+	3: nil,                      // tlsMode
+	4: nil,                      // serverName
+	5: nil,                      // nextProto
 }
 
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 func init() {
 	RegisterBackend("tcpxBackend", func(compName string, stage *Stage) Backend {
