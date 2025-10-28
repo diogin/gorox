@@ -759,10 +759,7 @@ func (r *_http1Out_) delHeader(name []byte) (deleted bool) {
 	return
 }
 func (r *_http1Out_) delHeaderAt(i uint8) {
-	if i == 0 {
-		BugExitln("delHeaderAt: i == 0 which must not happen")
-	}
-	from := r.edges[i-1]
+	from := r.edges[i-1] // i >= 1
 	edge := r.edges[i]
 	size := edge - from
 	copy(r.output[from:], r.output[edge:])

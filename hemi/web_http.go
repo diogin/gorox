@@ -1041,7 +1041,7 @@ func (r *_httpIn_) _recvContent(retain bool) any { // to []byte (for small conte
 			return err
 		}
 		// Since content is small, r.bodyWindow and tempFile are not needed.
-		contentText := GetNK(r.contentSize) // 4K/16K/64K1. max size of content is 64K1
+		contentText := GetNK(r.contentSize) // 4K/16K/64K1. max size of content is 64K1 here
 		r.receivedSize = int64(r.imme.size())
 		if r.receivedSize > 0 { // r.imme has data
 			copy(contentText, r.input[r.imme.from:r.imme.edge])
@@ -1246,53 +1246,6 @@ func (r *_httpIn_) allPairs(primes zone, extraKind int8) [][2]string {
 	}
 	return pairs
 }
-func (r *_httpIn_) getPair(name string, nameHash uint16, primes zone, extraKind int8) (value []byte, ok bool) {
-	if name == "" {
-		return
-	}
-	if nameHash == 0 {
-		nameHash = stringHash(name)
-	}
-	if extraKind == pairHeader || extraKind == pairTrailer { // skip comma field lines, only collects data of field lines without comma
-		for i := primes.from; i < primes.edge; i++ {
-			if prime := &r.primes[i]; prime.nameHash == nameHash {
-				if p := r._placeOf(prime); prime.nameEqualString(p, name) {
-					if !prime.isParsed() && !r._splitFieldLine(prime, defaultFdesc, p) {
-						continue
-					}
-					if !prime.isCommaValue() { // not a comma field, collect it
-						return prime.dataAt(p), true
-					}
-				}
-			}
-		}
-		if r.hasExtra[extraKind] {
-			for i := range len(r.extras) {
-				if extra := &r.extras[i]; extra.nameHash == nameHash && extra.kind == extraKind && !extra.isCommaValue() { // not a comma field, collect it
-					if p := r._placeOf(extra); extra.nameEqualString(p, name) {
-						return extra.dataAt(p), true
-					}
-				}
-			}
-		}
-	} else { // queries, cookies, forms, and params
-		for i := primes.from; i < primes.edge; i++ {
-			if prime := &r.primes[i]; prime.nameHash == nameHash {
-				if p := r._placeOf(prime); prime.nameEqualString(p, name) {
-					return prime.valueAt(p), true
-				}
-			}
-		}
-		if r.hasExtra[extraKind] {
-			for i := range len(r.extras) {
-				if extra := &r.extras[i]; extra.nameHash == nameHash && extra.kind == extraKind && extra.nameEqualString(r.array, name) {
-					return extra.valueAt(r.array), true
-				}
-			}
-		}
-	}
-	return
-}
 func (r *_httpIn_) getPairs(name string, nameHash uint16, primes zone, extraKind int8) (values []string, ok bool) {
 	if name == "" {
 		return
@@ -1340,6 +1293,53 @@ func (r *_httpIn_) getPairs(name string, nameHash uint16, primes zone, extraKind
 	}
 	if len(values) > 0 {
 		ok = true
+	}
+	return
+}
+func (r *_httpIn_) getPair(name string, nameHash uint16, primes zone, extraKind int8) (value []byte, ok bool) {
+	if name == "" {
+		return
+	}
+	if nameHash == 0 {
+		nameHash = stringHash(name)
+	}
+	if extraKind == pairHeader || extraKind == pairTrailer { // skip comma field lines, only collects data of field lines without comma
+		for i := primes.from; i < primes.edge; i++ {
+			if prime := &r.primes[i]; prime.nameHash == nameHash {
+				if p := r._placeOf(prime); prime.nameEqualString(p, name) {
+					if !prime.isParsed() && !r._splitFieldLine(prime, defaultFdesc, p) {
+						continue
+					}
+					if !prime.isCommaValue() { // not a comma field, collect it
+						return prime.dataAt(p), true
+					}
+				}
+			}
+		}
+		if r.hasExtra[extraKind] {
+			for i := range len(r.extras) {
+				if extra := &r.extras[i]; extra.nameHash == nameHash && extra.kind == extraKind && !extra.isCommaValue() { // not a comma field, collect it
+					if p := r._placeOf(extra); extra.nameEqualString(p, name) {
+						return extra.dataAt(p), true
+					}
+				}
+			}
+		}
+	} else { // queries, cookies, forms, and params
+		for i := primes.from; i < primes.edge; i++ {
+			if prime := &r.primes[i]; prime.nameHash == nameHash {
+				if p := r._placeOf(prime); prime.nameEqualString(p, name) {
+					return prime.valueAt(p), true
+				}
+			}
+		}
+		if r.hasExtra[extraKind] {
+			for i := range len(r.extras) {
+				if extra := &r.extras[i]; extra.nameHash == nameHash && extra.kind == extraKind && extra.nameEqualString(r.array, name) {
+					return extra.valueAt(r.array), true
+				}
+			}
+		}
 	}
 	return
 }
@@ -1531,35 +1531,14 @@ func (r *_httpIn_) _growArray(size int32) bool { // stock(<4K)->4K->16K->64K1->(
 		array = GetNK(int64(edge)) // 4K/16K/64K1
 	} else { // > _64K1
 		r.arrayKind = arrayKindMake
-		if edge <= _128K {
-			array = make([]byte, _128K)
-		} else if edge <= _256K {
-			array = make([]byte, _256K)
-		} else if edge <= _512K {
-			array = make([]byte, _512K)
-		} else if edge <= _1M {
-			array = make([]byte, _1M)
-		} else if edge <= _2M {
-			array = make([]byte, _2M)
-		} else if edge <= _4M {
-			array = make([]byte, _4M)
-		} else if edge <= _8M {
-			array = make([]byte, _8M)
-		} else if edge <= _16M {
-			array = make([]byte, _16M)
-		} else if edge <= _32M {
-			array = make([]byte, _32M)
-		} else if edge <= _64M {
-			array = make([]byte, _64M)
-		} else if edge <= _128M {
-			array = make([]byte, _128M)
-		} else if edge <= _256M {
-			array = make([]byte, _256M)
-		} else if edge <= _512M {
-			array = make([]byte, _512M)
-		} else { // <= _1G
-			array = make([]byte, _1G)
+		arraySize := int32(_128K)
+		for edge > arraySize {
+			arraySize *= 2
 		}
+		if arraySize > _1G {
+			arraySize = _1G
+		}
+		array = make([]byte, arraySize)
 	}
 	copy(array, r.array[0:r.arrayEdge])
 	if lastKind == arrayKindPool {
@@ -1599,7 +1578,7 @@ type httpOut interface {
 	header(name []byte) (value []byte, ok bool)
 	hasHeader(name []byte) bool
 	delHeader(name []byte) (deleted bool)
-	delHeaderAt(i uint8)
+	delHeaderAt(i uint8) // i >= 1
 	insertHeader(nameHash uint16, name []byte, value []byte) bool
 	removeHeader(nameHash uint16, name []byte) (deleted bool)
 	addedHeaders() []byte
@@ -3817,7 +3796,7 @@ func (r *serverRequest_) _evalIfUnmodifiedSince(date int64) (pass bool) {
 	return date <= r.unixTimes.ifUnmodifiedSince
 }
 
-func (r *serverRequest_) EvalIfRange(date int64, etag []byte, asOrigin bool) (canRange bool) {
+func (r *serverRequest_) EvalIfRange(date int64, etag []byte, asOrigin bool) (canRange bool) { // to test against preconditons intentionally
 	if r.unixTimes.ifRange == 0 {
 		if r._evalIfRangeETag(etag) {
 			return true
@@ -6449,11 +6428,11 @@ var httpHuffmanSizes = [256]uint8{ // 256B, for huffman encoding
 }
 
 func httpHuffmanLength(src []byte) int {
-	n := 0
+	numBits := 0
 	for _, b := range src {
-		n += int(httpHuffmanSizes[b])
+		numBits += int(httpHuffmanSizes[b])
 	}
-	return (n + 7) / 8
+	return (numBits + 7) / 8
 }
 func httpHuffmanEncode(dst []byte, src []byte) int {
 	// TODO
