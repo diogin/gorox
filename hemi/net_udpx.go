@@ -280,7 +280,7 @@ func (c *udpxCase) OnShutdown() { c.router.DecCase() }
 
 func (c *udpxCase) OnConfigure() {
 	if c.info == nil {
-		c.general = true
+		c.generic = true
 		return
 	}
 	cond := c.info.(caseCond)
@@ -311,7 +311,7 @@ func (c *udpxCase) OnPrepare() {
 func (c *udpxCase) addDealet(dealet UDPXDealet) { c.dealets = append(c.dealets, dealet) }
 
 func (c *udpxCase) isMatch(conn *UDPXConn) bool {
-	if c.general {
+	if c.generic {
 		return true
 	}
 	varValue := conn.riskyVariable(c.varCode, c.varName)

@@ -342,7 +342,7 @@ func (c *quixCase) OnShutdown() { c.router.DecCase() }
 
 func (c *quixCase) OnConfigure() {
 	if c.info == nil {
-		c.general = true
+		c.generic = true
 		return
 	}
 	cond := c.info.(caseCond)
@@ -373,7 +373,7 @@ func (c *quixCase) OnPrepare() {
 func (c *quixCase) addDealet(dealet QUIXDealet) { c.dealets = append(c.dealets, dealet) }
 
 func (c *quixCase) isMatch(conn *QUIXConn) bool {
-	if c.general {
+	if c.generic {
 		return true
 	}
 	varValue := conn.riskyVariable(c.varCode, c.varName)

@@ -465,7 +465,7 @@ func (c *tcpxCase) OnShutdown() { c.router.DecCase() }
 
 func (c *tcpxCase) OnConfigure() {
 	if c.info == nil {
-		c.general = true
+		c.generic = true
 		return
 	}
 	cond := c.info.(caseCond)
@@ -496,7 +496,7 @@ func (c *tcpxCase) OnPrepare() {
 func (c *tcpxCase) addDealet(dealet TCPXDealet) { c.dealets = append(c.dealets, dealet) }
 
 func (c *tcpxCase) isMatch(conn *TCPXConn) bool {
-	if c.general {
+	if c.generic {
 		return true
 	}
 	varValue := conn.riskyVariable(c.varCode, c.varName)

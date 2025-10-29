@@ -366,14 +366,14 @@ type Rule struct {
 	revisers []Reviser // revisers in this rule. NOTICE: revisers are sub components of webapp, not rule
 	socklets []Socklet // socklets in this rule. NOTICE: socklets are sub components of webapp, not rule
 	// States
-	generic    bool     // generic match?
-	logAccess  bool     // enable logging for this rule?
-	returnCode int16    // ...
-	returnText []byte   // ...
-	varCode    int16    // the variable code
-	varName    string   // the variable name
-	patterns   [][]byte // condition patterns
-	regexps    []*regexp.Regexp
+	generic    bool             // generic match?
+	logAccess  bool             // enable logging for this rule?
+	returnCode int16            // ...
+	returnText []byte           // ...
+	varCode    int16            // the variable code
+	varName    string           // the variable name
+	patterns   [][]byte         // condition patterns
+	regexps    []*regexp.Regexp // pre-compiled patterns
 	matcher    func(rule *Rule, req ServerRequest, value []byte) bool
 	checkFS    bool // will this rule check fs?
 }

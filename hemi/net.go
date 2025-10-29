@@ -40,11 +40,11 @@ type case_ struct { // for quixCase, tcpxCase, and udpxCase
 	Component_
 	// Assocs
 	// States
-	general  bool
-	varCode  int16
-	varName  string
-	patterns [][]byte
-	regexps  []*regexp.Regexp
+	generic  bool             // generic match?
+	varCode  int16            // the variable code
+	varName  string           // the variable name
+	patterns [][]byte         // condition patterns
+	regexps  []*regexp.Regexp // pre-compiled patterns
 }
 
 // dealet_
