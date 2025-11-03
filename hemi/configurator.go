@@ -484,7 +484,7 @@ func (c *configurator) _parseCaseCond(kase interface{ setInfo(info any) }) {
 	if c.currentTokenIs(tokenFSCheck) {
 		panic(errors.New("configurator error: fs check is not allowed in case"))
 	}
-	cond := caseCond{varCode: variable.info, varName: variable.text}
+	cond := condition{varCode: variable.info, varName: variable.text}
 	compare := c.expectToken(tokenCompare)
 	patterns := []string{}
 	if current := c.forwardToken(); current.kind == tokenString {
@@ -624,7 +624,7 @@ func (c *configurator) parseRule(webapp *Webapp) { // rule <compName> {}, rule <
 func (c *configurator) _parseRuleCond(rule *Rule) {
 	variable := c.expectToken(tokenVariable)
 	c.forwardToken()
-	cond := ruleCond{varCode: variable.info, varName: variable.text}
+	cond := condition{varCode: variable.info, varName: variable.text}
 	var compare *token
 	if c.currentTokenIs(tokenFSCheck) {
 		if variable.text != "path" {
@@ -860,16 +860,8 @@ func parseComponent0[T Component](c *configurator, compSign *token, stage *Stage
 	c._parseLeaf(component)
 }
 
-// caseCond is the case condition.
-type caseCond struct {
-	varCode  int16    // see varCodes. set as -1 if not available
-	varName  string   // used if varCode is not available
-	compare  string   // ==, ^=, $=, *=, ~=, !=, !^, !$, !*, !~
-	patterns []string // ...
-}
-
-// ruleCond is the rule condition.
-type ruleCond struct {
+// condition is the condition for case and rule.
+type condition struct {
 	varCode  int16    // see varCodes. set as -1 if not available
 	varName  string   // used if varCode is not available
 	compare  string   // ==, ^=, $=, *=, ~=, !=, !^, !$, !*, !~, -f, -d, -e, -D, -E, !f, !d, !e

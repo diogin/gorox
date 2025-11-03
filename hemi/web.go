@@ -388,7 +388,7 @@ func (r *Rule) OnConfigure() {
 	if r.info == nil {
 		r.generic = true
 	} else {
-		cond := r.info.(ruleCond)
+		cond := r.info.(condition)
 		r.varCode = cond.varCode
 		r.varName = cond.varName
 		isRegexp := cond.compare == "~=" || cond.compare == "!~"

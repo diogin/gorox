@@ -283,7 +283,7 @@ func (c *udpxCase) OnConfigure() {
 		c.generic = true
 		return
 	}
-	cond := c.info.(caseCond)
+	cond := c.info.(condition)
 	c.varCode = cond.varCode
 	c.varName = cond.varName
 	isRegexp := cond.compare == "~=" || cond.compare == "!~"
