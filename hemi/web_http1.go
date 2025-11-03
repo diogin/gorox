@@ -1425,9 +1425,9 @@ func (r *backend1Response) _recvControlData() bool { // status-line = HTTP-versi
 		// r.elemFore -> ' '
 		// r.inputEdge -> after ' ' or more
 		r.elemFore += 8
-	} else { // have < 9, but len("HTTP/1.X ") = 9.
+	} else { // have < 9, but len("HTTP/1.1 ") = 9.
 		// r.elemFore at 'H' -> ' '
-		// r.inputEdge at "TTP/1.X " -> after ' '
+		// r.inputEdge at "TTP/1.1 " -> after ' '
 		r.elemFore = r.inputEdge - 1
 		for i, n := int32(0), 9-have; i < n; i++ {
 			if r.elemFore++; r.elemFore == r.inputEdge && !r.in1.growHead() {
@@ -2420,9 +2420,9 @@ beforeVersion: // r.elemFore is at ' '.
 		// r.elemFore -> EOL
 		// r.inputEdge -> after EOL or more
 		r.elemFore += 8
-	} else { // have < 9, but len("HTTP/1.X\n") = 9.
+	} else { // have < 9, but len("HTTP/1.1\n") = 9.
 		// r.elemFore at 'H' -> EOL
-		// r.inputEdge at "TTP/1.X\n" -> after EOL
+		// r.inputEdge at "TTP/1.1\n" -> after EOL
 		r.elemFore = r.inputEdge - 1
 		for i, n := int32(0), 9-have; i < n; i++ {
 			if r.elemFore++; r.elemFore == r.inputEdge && !r.in1.growHead() {

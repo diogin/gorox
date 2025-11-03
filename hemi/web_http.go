@@ -489,7 +489,7 @@ func (r *_httpIn_) _splitFieldLine(field *pair, fdesc *fdesc, p []byte) bool { /
 	}
 	return true
 }
-func (r *_httpIn_) _parseFieldLine(field *pair, fdesc *fdesc, p []byte, fully bool) bool { // for field data and value params
+func (r *_httpIn_) _parseFieldLine(field *pair, fdesc *fdesc, p []byte, fully bool) bool { // parse field data and value params
 	field.setParsed()
 
 	if field.value.isEmpty() {
@@ -2344,32 +2344,6 @@ func (r *backendResponse_) _applyHeaderLine(lineIndex uint8) bool {
 	return true
 }
 
-var ( // minimal perfect hash table for singleton response header fields
-	backendResponseSingletonHeaderFieldTable = [14]struct {
-		parse bool // need general parse or not
-		fdesc      // allowQuote, allowEmpty, allowParam, hasComment
-		check func(*backendResponse_, *pair, uint8) bool
-	}{ // age content-disposition content-length content-location content-range content-type date etag expires last-modified location retry-after server set-cookie
-		0:  {false, fdesc{hashLastModified, false, false, false, false, bytesLastModified}, (*backendResponse_).checkLastModified},
-		1:  {true, fdesc{hashContentLocation, true, false, false, false, bytesContentLocation}, (*backendResponse_).checkContentLocation},
-		2:  {false, fdesc{hashSetCookie, false, false, false, false, bytesSetCookie}, (*backendResponse_).checkSetCookie}, // `a=b; Path=/; HttpsOnly` is not parameters
-		3:  {false, fdesc{hashContentRange, false, false, false, false, bytesContentRange}, (*backendResponse_).checkContentRange},
-		4:  {false, fdesc{hashETag, false, false, false, false, bytesETag}, (*backendResponse_).checkETag},
-		5:  {false, fdesc{hashRetryAfter, false, false, false, false, bytesRetryAfter}, (*backendResponse_).checkRetryAfter},
-		6:  {false, fdesc{hashLocation, false, false, false, false, bytesLocation}, (*backendResponse_).checkLocation},
-		7:  {false, fdesc{hashServer, false, false, false, true, bytesServer}, (*backendResponse_).checkServer},
-		8:  {false, fdesc{hashContentDisposition, true, false, true, false, bytesContentDisposition}, (*backendResponse_).checkContentDisposition},
-		9:  {true, fdesc{hashContentType, false, false, true, false, bytesContentType}, (*backendResponse_).checkContentType},
-		10: {false, fdesc{hashDate, false, false, false, false, bytesDate}, (*backendResponse_).checkDate},
-		11: {false, fdesc{hashContentLength, false, false, false, false, bytesContentLength}, (*backendResponse_).checkContentLength},
-		12: {false, fdesc{hashAge, false, false, false, false, bytesAge}, (*backendResponse_).checkAge},
-		13: {false, fdesc{hashExpires, false, false, false, false, bytesExpires}, (*backendResponse_).checkExpires},
-	}
-	backendResponseSingletonHeaderFieldFind = func(nameHash uint16) int {
-		return (3568946 / int(nameHash)) % len(backendResponseSingletonHeaderFieldTable)
-	}
-)
-
 func (r *backendResponse_) checkAge(headerLine *pair, lineIndex uint8) bool { // Age = delta-seconds
 	if headerLine.value.isEmpty() {
 		r.headResult, r.failReason = StatusBadRequest, "empty age"
@@ -2426,37 +2400,6 @@ func (r *backendResponse_) checkSetCookie(headerLine *pair, lineIndex uint8) boo
 	// extension-av = <any CHAR except CTLs or ";">
 	return true
 }
-
-var ( // minimal perfect hash table for important response header fields
-	backendResponseImportantHeaderFieldTable = [20]struct {
-		fdesc // allowQuote, allowEmpty, allowParam, hasComment
-		check func(*backendResponse_, []pair, uint8, uint8) bool
-	}{ // accept accept-encoding accept-ranges allow alt-svc cache-control cache-status cdn-cache-control connection content-encoding content-language keep-alive proxy-authenticate proxy-connection trailer transfer-encoding upgrade vary via www-authenticate
-		0:  {fdesc{hashAccept, false, true, true, false, bytesAccept}, (*backendResponse_).checkAccept},
-		1:  {fdesc{hashAltSvc, false, false, true, false, bytesAltSvc}, (*backendResponse_).checkAltSvc},
-		2:  {fdesc{hashContentEncoding, false, false, false, false, bytesContentEncoding}, (*backendResponse_).checkContentEncoding},
-		3:  {fdesc{hashVia, false, false, false, true, bytesVia}, (*backendResponse_).checkVia},
-		4:  {fdesc{hashAcceptEncoding, false, true, true, false, bytesAcceptEncoding}, (*backendResponse_).checkAcceptEncoding},
-		5:  {fdesc{hashKeepAlive, false, false, false, false, bytesKeepAlive}, (*backendResponse_).checkKeepAlive},
-		6:  {fdesc{hashCDNCacheControl, false, false, false, false, bytesCDNCacheControl}, (*backendResponse_).checkCDNCacheControl},
-		7:  {fdesc{hashCacheStatus, false, false, true, false, bytesCacheStatus}, (*backendResponse_).checkCacheStatus},
-		8:  {fdesc{hashConnection, false, false, false, false, bytesConnection}, (*backendResponse_).checkConnection},
-		9:  {fdesc{hashAllow, false, true, false, false, bytesAllow}, (*backendResponse_).checkAllow},
-		10: {fdesc{hashUpgrade, false, false, false, false, bytesUpgrade}, (*backendResponse_).checkUpgrade},
-		11: {fdesc{hashContentLanguage, false, false, false, false, bytesContentLanguage}, (*backendResponse_).checkContentLanguage},
-		12: {fdesc{hashProxyConnection, false, false, false, false, bytesProxyConnection}, (*backendResponse_).checkProxyConnection},
-		13: {fdesc{hashWWWAuthenticate, false, false, false, false, bytesWWWAuthenticate}, (*backendResponse_).checkWWWAuthenticate},
-		14: {fdesc{hashTrailer, false, false, false, false, bytesTrailer}, (*backendResponse_).checkTrailer},
-		15: {fdesc{hashCacheControl, false, false, false, false, bytesCacheControl}, (*backendResponse_).checkCacheControl},
-		16: {fdesc{hashProxyAuthenticate, false, false, false, false, bytesProxyAuthenticate}, (*backendResponse_).checkProxyAuthenticate},
-		17: {fdesc{hashTransferEncoding, false, false, false, false, bytesTransferEncoding}, (*backendResponse_).checkTransferEncoding}, // deliberately false
-		18: {fdesc{hashVary, false, false, false, false, bytesVary}, (*backendResponse_).checkVary},
-		19: {fdesc{hashAcceptRanges, false, false, false, false, bytesAcceptRanges}, (*backendResponse_).checkAcceptRanges},
-	}
-	backendResponseImportantHeaderFieldFind = func(nameHash uint16) int {
-		return (964916190 / int(nameHash)) % len(backendResponseImportantHeaderFieldTable)
-	}
-)
 
 func (r *backendResponse_) checkAcceptRanges(subLines []pair, subFrom uint8, subEdge uint8) bool { // Accept-Ranges = 1#range-unit
 	if subFrom == subEdge {
@@ -2631,6 +2574,63 @@ func (r *backendResponse_) applyTrailerLine(lineIndex uint8) bool {
 	return true
 }
 
+var ( // minimal perfect hash table for singleton response header fields
+	backendResponseSingletonHeaderFieldTable = [14]struct {
+		parse bool // need general parse or not
+		fdesc      // allowQuote, allowEmpty, allowParam, hasComment
+		check func(*backendResponse_, *pair, uint8) bool
+	}{ // age content-disposition content-length content-location content-range content-type date etag expires last-modified location retry-after server set-cookie
+		0:  {false, fdesc{hashLastModified, false, false, false, false, bytesLastModified}, (*backendResponse_).checkLastModified},
+		1:  {true, fdesc{hashContentLocation, true, false, false, false, bytesContentLocation}, (*backendResponse_).checkContentLocation},
+		2:  {false, fdesc{hashSetCookie, false, false, false, false, bytesSetCookie}, (*backendResponse_).checkSetCookie}, // `a=b; Path=/; HttpsOnly` is not parameters
+		3:  {false, fdesc{hashContentRange, false, false, false, false, bytesContentRange}, (*backendResponse_).checkContentRange},
+		4:  {false, fdesc{hashETag, false, false, false, false, bytesETag}, (*backendResponse_).checkETag},
+		5:  {false, fdesc{hashRetryAfter, false, false, false, false, bytesRetryAfter}, (*backendResponse_).checkRetryAfter},
+		6:  {false, fdesc{hashLocation, false, false, false, false, bytesLocation}, (*backendResponse_).checkLocation},
+		7:  {false, fdesc{hashServer, false, false, false, true, bytesServer}, (*backendResponse_).checkServer},
+		8:  {false, fdesc{hashContentDisposition, true, false, true, false, bytesContentDisposition}, (*backendResponse_).checkContentDisposition},
+		9:  {true, fdesc{hashContentType, false, false, true, false, bytesContentType}, (*backendResponse_).checkContentType},
+		10: {false, fdesc{hashDate, false, false, false, false, bytesDate}, (*backendResponse_).checkDate},
+		11: {false, fdesc{hashContentLength, false, false, false, false, bytesContentLength}, (*backendResponse_).checkContentLength},
+		12: {false, fdesc{hashAge, false, false, false, false, bytesAge}, (*backendResponse_).checkAge},
+		13: {false, fdesc{hashExpires, false, false, false, false, bytesExpires}, (*backendResponse_).checkExpires},
+	}
+	backendResponseSingletonHeaderFieldFind = func(nameHash uint16) int {
+		return (3568946 / int(nameHash)) % len(backendResponseSingletonHeaderFieldTable)
+	}
+)
+
+var ( // minimal perfect hash table for important response header fields
+	backendResponseImportantHeaderFieldTable = [20]struct {
+		fdesc // allowQuote, allowEmpty, allowParam, hasComment
+		check func(*backendResponse_, []pair, uint8, uint8) bool
+	}{ // accept accept-encoding accept-ranges allow alt-svc cache-control cache-status cdn-cache-control connection content-encoding content-language keep-alive proxy-authenticate proxy-connection trailer transfer-encoding upgrade vary via www-authenticate
+		0:  {fdesc{hashAccept, false, true, true, false, bytesAccept}, (*backendResponse_).checkAccept},
+		1:  {fdesc{hashAltSvc, false, false, true, false, bytesAltSvc}, (*backendResponse_).checkAltSvc},
+		2:  {fdesc{hashContentEncoding, false, false, false, false, bytesContentEncoding}, (*backendResponse_).checkContentEncoding},
+		3:  {fdesc{hashVia, false, false, false, true, bytesVia}, (*backendResponse_).checkVia},
+		4:  {fdesc{hashAcceptEncoding, false, true, true, false, bytesAcceptEncoding}, (*backendResponse_).checkAcceptEncoding},
+		5:  {fdesc{hashKeepAlive, false, false, false, false, bytesKeepAlive}, (*backendResponse_).checkKeepAlive},
+		6:  {fdesc{hashCDNCacheControl, false, false, false, false, bytesCDNCacheControl}, (*backendResponse_).checkCDNCacheControl},
+		7:  {fdesc{hashCacheStatus, false, false, true, false, bytesCacheStatus}, (*backendResponse_).checkCacheStatus},
+		8:  {fdesc{hashConnection, false, false, false, false, bytesConnection}, (*backendResponse_).checkConnection},
+		9:  {fdesc{hashAllow, false, true, false, false, bytesAllow}, (*backendResponse_).checkAllow},
+		10: {fdesc{hashUpgrade, false, false, false, false, bytesUpgrade}, (*backendResponse_).checkUpgrade},
+		11: {fdesc{hashContentLanguage, false, false, false, false, bytesContentLanguage}, (*backendResponse_).checkContentLanguage},
+		12: {fdesc{hashProxyConnection, false, false, false, false, bytesProxyConnection}, (*backendResponse_).checkProxyConnection},
+		13: {fdesc{hashWWWAuthenticate, false, false, false, false, bytesWWWAuthenticate}, (*backendResponse_).checkWWWAuthenticate},
+		14: {fdesc{hashTrailer, false, false, false, false, bytesTrailer}, (*backendResponse_).checkTrailer},
+		15: {fdesc{hashCacheControl, false, false, false, false, bytesCacheControl}, (*backendResponse_).checkCacheControl},
+		16: {fdesc{hashProxyAuthenticate, false, false, false, false, bytesProxyAuthenticate}, (*backendResponse_).checkProxyAuthenticate},
+		17: {fdesc{hashTransferEncoding, false, false, false, false, bytesTransferEncoding}, (*backendResponse_).checkTransferEncoding}, // deliberately false
+		18: {fdesc{hashVary, false, false, false, false, bytesVary}, (*backendResponse_).checkVary},
+		19: {fdesc{hashAcceptRanges, false, false, false, false, bytesAcceptRanges}, (*backendResponse_).checkAcceptRanges},
+	}
+	backendResponseImportantHeaderFieldFind = func(nameHash uint16) int {
+		return (964916190 / int(nameHash)) % len(backendResponseImportantHeaderFieldTable)
+	}
+)
+
 // BackendRequest is the backend-side http request.
 type BackendRequest interface { // for *backend[1-3]Request
 	proxySetMethodURI(method []byte, uri []byte, hasContent bool) bool
@@ -2717,31 +2717,6 @@ func (r *backendRequest_) endVague() error { // revising is not supported in bac
 	}
 	return r.out.finalizeVague()
 }
-
-var ( // minimal perfect hash table for request critical header fields
-	backendRequestCriticalHeaderFieldTable = [12]struct {
-		hash uint16
-		name []byte
-		fAdd func(*backendRequest_, []byte) (ok bool)
-		fDel func(*backendRequest_) (deleted bool)
-	}{ // connection content-length content-type cookie date host if-modified-since if-range if-unmodified-since transfer-encoding upgrade via
-		0:  {hashContentLength, bytesContentLength, nil, nil}, // restricted. added at finalizeHeaders()
-		1:  {hashConnection, bytesConnection, nil, nil},       // restricted. added at finalizeHeaders()
-		2:  {hashIfRange, bytesIfRange, (*backendRequest_)._insertIfRange, (*backendRequest_)._removeIfRange},
-		3:  {hashUpgrade, bytesUpgrade, nil, nil}, // restricted. not allowed to change the protocol. may be added if webSocket?
-		4:  {hashIfModifiedSince, bytesIfModifiedSince, (*backendRequest_)._insertIfModifiedSince, (*backendRequest_)._removeIfModifiedSince},
-		5:  {hashIfUnmodifiedSince, bytesIfUnmodifiedSince, (*backendRequest_)._insertIfUnmodifiedSince, (*backendRequest_)._removeIfUnmodifiedSince},
-		6:  {hashHost, bytesHost, (*backendRequest_)._insertHost, (*backendRequest_)._removeHost},
-		7:  {hashTransferEncoding, bytesTransferEncoding, nil, nil}, // restricted. added at finalizeHeaders() if needed
-		8:  {hashContentType, bytesContentType, (*backendRequest_)._insertContentType, (*backendRequest_)._removeContentType},
-		9:  {hashCookie, bytesCookie, nil, nil}, // restricted. added separately
-		10: {hashDate, bytesDate, (*backendRequest_)._insertDate, (*backendRequest_)._removeDate},
-		11: {hashVia, bytesVia, nil, nil}, // restricted. added if needed when acting as a proxy
-	}
-	backendRequestCriticalHeaderFieldFind = func(nameHash uint16) int {
-		return (645048 / int(nameHash)) % len(backendRequestCriticalHeaderFieldTable)
-	}
-)
 
 func (r *backendRequest_) insertHeader(nameHash uint16, name []byte, value []byte) bool {
 	h := &backendRequestCriticalHeaderFieldTable[backendRequestCriticalHeaderFieldFind(nameHash)]
@@ -2889,6 +2864,31 @@ func (r *backendRequest_) proxyCopyTrailerLines(servReq ServerRequest, proxyConf
 		return out.addTrailer(trailerName, lineValue)
 	})
 }
+
+var ( // minimal perfect hash table for request critical header fields
+	backendRequestCriticalHeaderFieldTable = [12]struct {
+		hash uint16
+		name []byte
+		fAdd func(*backendRequest_, []byte) (ok bool)
+		fDel func(*backendRequest_) (deleted bool)
+	}{ // connection content-length content-type cookie date host if-modified-since if-range if-unmodified-since transfer-encoding upgrade via
+		0:  {hashContentLength, bytesContentLength, nil, nil}, // restricted. added at finalizeHeaders()
+		1:  {hashConnection, bytesConnection, nil, nil},       // restricted. added at finalizeHeaders()
+		2:  {hashIfRange, bytesIfRange, (*backendRequest_)._insertIfRange, (*backendRequest_)._removeIfRange},
+		3:  {hashUpgrade, bytesUpgrade, nil, nil}, // restricted. not allowed to change the protocol. may be added if webSocket?
+		4:  {hashIfModifiedSince, bytesIfModifiedSince, (*backendRequest_)._insertIfModifiedSince, (*backendRequest_)._removeIfModifiedSince},
+		5:  {hashIfUnmodifiedSince, bytesIfUnmodifiedSince, (*backendRequest_)._insertIfUnmodifiedSince, (*backendRequest_)._removeIfUnmodifiedSince},
+		6:  {hashHost, bytesHost, (*backendRequest_)._insertHost, (*backendRequest_)._removeHost},
+		7:  {hashTransferEncoding, bytesTransferEncoding, nil, nil}, // restricted. added at finalizeHeaders() if needed
+		8:  {hashContentType, bytesContentType, (*backendRequest_)._insertContentType, (*backendRequest_)._removeContentType},
+		9:  {hashCookie, bytesCookie, nil, nil}, // restricted. added separately
+		10: {hashDate, bytesDate, (*backendRequest_)._insertDate, (*backendRequest_)._removeDate},
+		11: {hashVia, bytesVia, nil, nil}, // restricted. added if needed when acting as a proxy
+	}
+	backendRequestCriticalHeaderFieldFind = func(nameHash uint16) int {
+		return (645048 / int(nameHash)) % len(backendRequestCriticalHeaderFieldTable)
+	}
+)
 
 // BackendSocket is the backend-side webSocket.
 type BackendSocket interface { // for *backend[1-3]Socket
@@ -3406,26 +3406,6 @@ func (r *serverRequest_) recognizeMethod(method []byte, methodHash uint16) {
 	}
 }
 
-var ( // minimal perfect hash table for best known http methods
-	serverMethodBytes = []byte("GET HEAD POST PUT DELETE CONNECT OPTIONS TRACE")
-	serverMethodTable = [8]struct {
-		hash uint16
-		from uint8
-		edge uint8
-		code uint32
-	}{
-		0: {326, 9, 13, MethodPOST},
-		1: {274, 4, 8, MethodHEAD},
-		2: {249, 14, 17, MethodPUT},
-		3: {224, 0, 3, MethodGET},
-		4: {556, 33, 40, MethodOPTIONS},
-		5: {522, 25, 32, MethodCONNECT},
-		6: {435, 18, 24, MethodDELETE},
-		7: {367, 41, 46, MethodTRACE},
-	}
-	serverMethodFind = func(methodHash uint16) int { return (2610 / int(methodHash)) % len(serverMethodTable) }
-)
-
 func (r *serverRequest_) Authority() string { return string(r.RiskyAuthority()) }
 func (r *serverRequest_) RiskyAuthority() []byte {
 	return r.input[r.authority.from:r.authority.edge]
@@ -3819,34 +3799,6 @@ func (r *serverRequest_) _applyHeaderLine(lineIndex uint8) bool {
 	return true
 }
 
-var ( // minimal perfect hash table for singleton request header fields
-	serverRequestSingletonHeaderFieldTable = [16]struct {
-		parse bool // need general parse or not
-		fdesc      // allowQuote, allowEmpty, allowParam, hasComment
-		check func(*serverRequest_, *pair, uint8) bool
-	}{ // authorization content-length content-location content-range content-type cookie date host if-modified-since if-range if-unmodified-since max-forwards proxy-authorization range referer user-agent
-		0:  {true, fdesc{hashReferer, true, false, false, false, bytesReferer}, (*serverRequest_).checkReferer},
-		1:  {false, fdesc{hashMaxForwards, false, false, false, false, bytesMaxForwards}, (*serverRequest_).checkMaxForwards},
-		2:  {true, fdesc{hashContentType, false, false, true, false, bytesContentType}, (*serverRequest_).checkContentType},
-		3:  {false, fdesc{hashDate, false, false, false, false, bytesDate}, (*serverRequest_).checkDate},
-		4:  {false, fdesc{hashRange, false, false, false, false, bytesRange}, (*serverRequest_).checkRange},
-		5:  {false, fdesc{hashContentRange, false, false, false, false, bytesContentRange}, (*serverRequest_).checkContentRange},
-		6:  {false, fdesc{hashContentLength, false, false, false, false, bytesContentLength}, (*serverRequest_).checkContentLength},
-		7:  {false, fdesc{hashUserAgent, false, false, false, true, bytesUserAgent}, (*serverRequest_).checkUserAgent},
-		8:  {false, fdesc{hashProxyAuthorization, false, false, false, false, bytesProxyAuthorization}, (*serverRequest_).checkProxyAuthorization},
-		9:  {false, fdesc{hashAuthorization, false, false, false, false, bytesAuthorization}, (*serverRequest_).checkAuthorization},
-		10: {false, fdesc{hashIfRange, false, false, false, false, bytesIfRange}, (*serverRequest_).checkIfRange},
-		11: {false, fdesc{hashHost, false, false, false, false, bytesHost}, (*serverRequest_).checkHost},
-		12: {false, fdesc{hashIfUnmodifiedSince, false, false, false, false, bytesIfUnmodifiedSince}, (*serverRequest_).checkIfUnmodifiedSince},
-		13: {false, fdesc{hashIfModifiedSince, false, false, false, false, bytesIfModifiedSince}, (*serverRequest_).checkIfModifiedSince},
-		14: {true, fdesc{hashContentLocation, true, false, false, false, bytesContentLocation}, (*serverRequest_).checkContentLocation},
-		15: {false, fdesc{hashCookie, false, false, false, false, bytesCookie}, (*serverRequest_).checkCookie}, // `a=b; c=d; e=f` is cookie list, not parameters
-	}
-	serverRequestSingletonHeaderFieldFind = func(nameHash uint16) int {
-		return (8175626 / int(nameHash)) % len(serverRequestSingletonHeaderFieldTable)
-	}
-)
-
 func (r *serverRequest_) checkAuthorization(headerLine *pair, lineIndex uint8) bool { // Authorization = auth-scheme [ 1*SP ( token68 / #auth-param ) ]
 	// auth-scheme = token
 	// token68     = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="
@@ -4085,39 +4037,6 @@ func (r *serverRequest_) _addRange(rang Range) bool {
 	r.numRanges++
 	return true
 }
-
-var ( // minimal perfect hash table for important request header fields
-	serverRequestImportantHeaderFieldTable = [22]struct {
-		fdesc // allowQuote, allowEmpty, allowParam, hasComment
-		check func(*serverRequest_, []pair, uint8, uint8) bool
-	}{ // accept accept-encoding accept-language cache-control connection content-encoding content-language expect forwarded if-match if-none-match keep-alive proxy-connection te trailer transfer-encoding upgrade via x-forwarded-by x-forwarded-for x-forwarded-host x-forwarded-proto
-		0:  {fdesc{hashConnection, false, false, false, false, bytesConnection}, (*serverRequest_).checkConnection},
-		1:  {fdesc{hashProxyConnection, false, false, false, false, bytesProxyConnection}, (*serverRequest_).checkProxyConnection},
-		2:  {fdesc{hashXForwardedHost, false, false, false, false, bytesXForwardedHost}, (*serverRequest_).checkXForwardedHost},
-		3:  {fdesc{hashAccept, false, true, true, false, bytesAccept}, (*serverRequest_).checkAccept},
-		4:  {fdesc{hashIfNoneMatch, true, false, false, false, bytesIfNoneMatch}, (*serverRequest_).checkIfNoneMatch},
-		5:  {fdesc{hashXForwardedProto, false, false, false, false, bytesXForwardedProto}, (*serverRequest_).checkXForwardedProto},
-		6:  {fdesc{hashTE, false, false, true, false, bytesTE}, (*serverRequest_).checkTE},
-		7:  {fdesc{hashContentLanguage, false, false, false, false, bytesContentLanguage}, (*serverRequest_).checkContentLanguage},
-		8:  {fdesc{hashTrailer, false, false, false, false, bytesTrailer}, (*serverRequest_).checkTrailer},
-		9:  {fdesc{hashForwarded, false, false, false, false, bytesForwarded}, (*serverRequest_).checkForwarded}, // note: `for=192.0.2.60;proto=http;by=203.0.113.43` is not parameters
-		10: {fdesc{hashUpgrade, false, false, false, false, bytesUpgrade}, (*serverRequest_).checkUpgrade},
-		11: {fdesc{hashKeepAlive, false, false, false, false, bytesKeepAlive}, (*serverRequest_).checkKeepAlive},
-		12: {fdesc{hashAcceptEncoding, false, true, true, false, bytesAcceptEncoding}, (*serverRequest_).checkAcceptEncoding},
-		13: {fdesc{hashContentEncoding, false, false, false, false, bytesContentEncoding}, (*serverRequest_).checkContentEncoding},
-		14: {fdesc{hashVia, false, false, false, true, bytesVia}, (*serverRequest_).checkVia},
-		15: {fdesc{hashTransferEncoding, false, false, false, false, bytesTransferEncoding}, (*serverRequest_).checkTransferEncoding}, // deliberately false
-		16: {fdesc{hashIfMatch, true, false, false, false, bytesIfMatch}, (*serverRequest_).checkIfMatch},
-		17: {fdesc{hashXForwardedBy, false, false, false, false, bytesXForwardedBy}, (*serverRequest_).checkXForwardedBy},
-		18: {fdesc{hashXForwardedFor, false, false, false, false, bytesXForwardedFor}, (*serverRequest_).checkXForwardedFor},
-		19: {fdesc{hashAcceptLanguage, false, false, true, false, bytesAcceptLanguage}, (*serverRequest_).checkAcceptLanguage},
-		20: {fdesc{hashExpect, false, false, true, false, bytesExpect}, (*serverRequest_).checkExpect},
-		21: {fdesc{hashCacheControl, false, false, false, false, bytesCacheControl}, (*serverRequest_).checkCacheControl},
-	}
-	serverRequestImportantHeaderFieldFind = func(nameHash uint16) int {
-		return (271995178 / int(nameHash)) % len(serverRequestImportantHeaderFieldTable)
-	}
-)
 
 func (r *serverRequest_) checkAcceptLanguage(subLines []pair, subFrom uint8, subEdge uint8) bool { // Accept-Language = #( language-range [ weight ] )
 	// language-range = <language-range, see [RFC4647], Section 2.1>
@@ -5461,6 +5380,87 @@ func (r *serverRequest_) riskyVariable(varCode int16, varName string) (varValue 
 	return nil
 }
 
+var ( // minimal perfect hash table for best known http methods
+	serverMethodBytes = []byte("GET HEAD POST PUT DELETE CONNECT OPTIONS TRACE")
+	serverMethodTable = [8]struct {
+		hash uint16
+		from uint8
+		edge uint8
+		code uint32
+	}{
+		0: {326, 9, 13, MethodPOST},
+		1: {274, 4, 8, MethodHEAD},
+		2: {249, 14, 17, MethodPUT},
+		3: {224, 0, 3, MethodGET},
+		4: {556, 33, 40, MethodOPTIONS},
+		5: {522, 25, 32, MethodCONNECT},
+		6: {435, 18, 24, MethodDELETE},
+		7: {367, 41, 46, MethodTRACE},
+	}
+	serverMethodFind = func(methodHash uint16) int { return (2610 / int(methodHash)) % len(serverMethodTable) }
+)
+
+var ( // minimal perfect hash table for singleton request header fields
+	serverRequestSingletonHeaderFieldTable = [16]struct {
+		parse bool // need general parse or not
+		fdesc      // allowQuote, allowEmpty, allowParam, hasComment
+		check func(*serverRequest_, *pair, uint8) bool
+	}{ // authorization content-length content-location content-range content-type cookie date host if-modified-since if-range if-unmodified-since max-forwards proxy-authorization range referer user-agent
+		0:  {true, fdesc{hashReferer, true, false, false, false, bytesReferer}, (*serverRequest_).checkReferer},
+		1:  {false, fdesc{hashMaxForwards, false, false, false, false, bytesMaxForwards}, (*serverRequest_).checkMaxForwards},
+		2:  {true, fdesc{hashContentType, false, false, true, false, bytesContentType}, (*serverRequest_).checkContentType},
+		3:  {false, fdesc{hashDate, false, false, false, false, bytesDate}, (*serverRequest_).checkDate},
+		4:  {false, fdesc{hashRange, false, false, false, false, bytesRange}, (*serverRequest_).checkRange},
+		5:  {false, fdesc{hashContentRange, false, false, false, false, bytesContentRange}, (*serverRequest_).checkContentRange},
+		6:  {false, fdesc{hashContentLength, false, false, false, false, bytesContentLength}, (*serverRequest_).checkContentLength},
+		7:  {false, fdesc{hashUserAgent, false, false, false, true, bytesUserAgent}, (*serverRequest_).checkUserAgent},
+		8:  {false, fdesc{hashProxyAuthorization, false, false, false, false, bytesProxyAuthorization}, (*serverRequest_).checkProxyAuthorization},
+		9:  {false, fdesc{hashAuthorization, false, false, false, false, bytesAuthorization}, (*serverRequest_).checkAuthorization},
+		10: {false, fdesc{hashIfRange, false, false, false, false, bytesIfRange}, (*serverRequest_).checkIfRange},
+		11: {false, fdesc{hashHost, false, false, false, false, bytesHost}, (*serverRequest_).checkHost},
+		12: {false, fdesc{hashIfUnmodifiedSince, false, false, false, false, bytesIfUnmodifiedSince}, (*serverRequest_).checkIfUnmodifiedSince},
+		13: {false, fdesc{hashIfModifiedSince, false, false, false, false, bytesIfModifiedSince}, (*serverRequest_).checkIfModifiedSince},
+		14: {true, fdesc{hashContentLocation, true, false, false, false, bytesContentLocation}, (*serverRequest_).checkContentLocation},
+		15: {false, fdesc{hashCookie, false, false, false, false, bytesCookie}, (*serverRequest_).checkCookie}, // `a=b; c=d; e=f` is cookie list, not parameters
+	}
+	serverRequestSingletonHeaderFieldFind = func(nameHash uint16) int {
+		return (8175626 / int(nameHash)) % len(serverRequestSingletonHeaderFieldTable)
+	}
+)
+
+var ( // minimal perfect hash table for important request header fields
+	serverRequestImportantHeaderFieldTable = [22]struct {
+		fdesc // allowQuote, allowEmpty, allowParam, hasComment
+		check func(*serverRequest_, []pair, uint8, uint8) bool
+	}{ // accept accept-encoding accept-language cache-control connection content-encoding content-language expect forwarded if-match if-none-match keep-alive proxy-connection te trailer transfer-encoding upgrade via x-forwarded-by x-forwarded-for x-forwarded-host x-forwarded-proto
+		0:  {fdesc{hashConnection, false, false, false, false, bytesConnection}, (*serverRequest_).checkConnection},
+		1:  {fdesc{hashProxyConnection, false, false, false, false, bytesProxyConnection}, (*serverRequest_).checkProxyConnection},
+		2:  {fdesc{hashXForwardedHost, false, false, false, false, bytesXForwardedHost}, (*serverRequest_).checkXForwardedHost},
+		3:  {fdesc{hashAccept, false, true, true, false, bytesAccept}, (*serverRequest_).checkAccept},
+		4:  {fdesc{hashIfNoneMatch, true, false, false, false, bytesIfNoneMatch}, (*serverRequest_).checkIfNoneMatch},
+		5:  {fdesc{hashXForwardedProto, false, false, false, false, bytesXForwardedProto}, (*serverRequest_).checkXForwardedProto},
+		6:  {fdesc{hashTE, false, false, true, false, bytesTE}, (*serverRequest_).checkTE},
+		7:  {fdesc{hashContentLanguage, false, false, false, false, bytesContentLanguage}, (*serverRequest_).checkContentLanguage},
+		8:  {fdesc{hashTrailer, false, false, false, false, bytesTrailer}, (*serverRequest_).checkTrailer},
+		9:  {fdesc{hashForwarded, false, false, false, false, bytesForwarded}, (*serverRequest_).checkForwarded}, // note: `for=192.0.2.60;proto=http;by=203.0.113.43` is not parameters
+		10: {fdesc{hashUpgrade, false, false, false, false, bytesUpgrade}, (*serverRequest_).checkUpgrade},
+		11: {fdesc{hashKeepAlive, false, false, false, false, bytesKeepAlive}, (*serverRequest_).checkKeepAlive},
+		12: {fdesc{hashAcceptEncoding, false, true, true, false, bytesAcceptEncoding}, (*serverRequest_).checkAcceptEncoding},
+		13: {fdesc{hashContentEncoding, false, false, false, false, bytesContentEncoding}, (*serverRequest_).checkContentEncoding},
+		14: {fdesc{hashVia, false, false, false, true, bytesVia}, (*serverRequest_).checkVia},
+		15: {fdesc{hashTransferEncoding, false, false, false, false, bytesTransferEncoding}, (*serverRequest_).checkTransferEncoding}, // deliberately false
+		16: {fdesc{hashIfMatch, true, false, false, false, bytesIfMatch}, (*serverRequest_).checkIfMatch},
+		17: {fdesc{hashXForwardedBy, false, false, false, false, bytesXForwardedBy}, (*serverRequest_).checkXForwardedBy},
+		18: {fdesc{hashXForwardedFor, false, false, false, false, bytesXForwardedFor}, (*serverRequest_).checkXForwardedFor},
+		19: {fdesc{hashAcceptLanguage, false, false, true, false, bytesAcceptLanguage}, (*serverRequest_).checkAcceptLanguage},
+		20: {fdesc{hashExpect, false, false, true, false, bytesExpect}, (*serverRequest_).checkExpect},
+		21: {fdesc{hashCacheControl, false, false, false, false, bytesCacheControl}, (*serverRequest_).checkCacheControl},
+	}
+	serverRequestImportantHeaderFieldFind = func(nameHash uint16) int {
+		return (271995178 / int(nameHash)) % len(serverRequestImportantHeaderFieldTable)
+	}
+)
+
 var serverRequestVariables = [...]func(*serverRequest_) []byte{ // keep sync with varCodes
 	0: (*serverRequest_).RiskyMethod,      // method
 	1: (*serverRequest_).RiskyScheme,      // scheme
@@ -5783,29 +5783,6 @@ func (r *serverResponse_) endVague() error {
 	return r.out.finalizeVague()
 }
 
-var ( // minimal perfect hash table for response critical header fields
-	serverResponseCriticalHeaderFieldTable = [10]struct {
-		hash uint16
-		name []byte
-		fAdd func(*serverResponse_, []byte) (ok bool)
-		fDel func(*serverResponse_) (deleted bool)
-	}{ // connection content-length content-type date expires last-modified server set-cookie transfer-encoding upgrade
-		0: {hashServer, bytesServer, nil, nil},       // restricted. added at finalizeHeaders()
-		1: {hashSetCookie, bytesSetCookie, nil, nil}, // restricted. use specific api to add
-		2: {hashUpgrade, bytesUpgrade, nil, nil},     // restricted. not allowed to change the protocol. may be added if webSocket?
-		3: {hashDate, bytesDate, (*serverResponse_)._insertDate, (*serverResponse_)._removeDate},
-		4: {hashTransferEncoding, bytesTransferEncoding, nil, nil}, // restricted. added at finalizeHeaders() if needed
-		5: {hashConnection, bytesConnection, nil, nil},             // restricted. added at finalizeHeaders()
-		6: {hashLastModified, bytesLastModified, (*serverResponse_)._insertLastModified, (*serverResponse_)._removeLastModified},
-		7: {hashExpires, bytesExpires, (*serverResponse_)._insertExpires, (*serverResponse_)._removeExpires},
-		8: {hashContentLength, bytesContentLength, nil, nil}, // restricted. added at finalizeHeaders()
-		9: {hashContentType, bytesContentType, (*serverResponse_)._insertContentType, (*serverResponse_)._removeContentType},
-	}
-	serverResponseCriticalHeaderFieldFind = func(nameHash uint16) int {
-		return (113100 / int(nameHash)) % len(serverResponseCriticalHeaderFieldTable)
-	}
-)
-
 func (r *serverResponse_) insertHeader(nameHash uint16, name []byte, value []byte) bool {
 	h := &serverResponseCriticalHeaderFieldTable[serverResponseCriticalHeaderFieldFind(nameHash)]
 	if h.hash == nameHash && bytes.Equal(h.name, name) {
@@ -5894,6 +5871,29 @@ func (r *serverResponse_) hookReviser(reviser Reviser) { // to revise output con
 	r.hasRevisers = true
 	r.revisers[reviser.Rank()] = reviser.ID() // revisers are placed to fixed position, by their ranks.
 }
+
+var ( // minimal perfect hash table for response critical header fields
+	serverResponseCriticalHeaderFieldTable = [10]struct {
+		hash uint16
+		name []byte
+		fAdd func(*serverResponse_, []byte) (ok bool)
+		fDel func(*serverResponse_) (deleted bool)
+	}{ // connection content-length content-type date expires last-modified server set-cookie transfer-encoding upgrade
+		0: {hashServer, bytesServer, nil, nil},       // restricted. added at finalizeHeaders()
+		1: {hashSetCookie, bytesSetCookie, nil, nil}, // restricted. use specific api to add
+		2: {hashUpgrade, bytesUpgrade, nil, nil},     // restricted. not allowed to change the protocol. may be added if webSocket?
+		3: {hashDate, bytesDate, (*serverResponse_)._insertDate, (*serverResponse_)._removeDate},
+		4: {hashTransferEncoding, bytesTransferEncoding, nil, nil}, // restricted. added at finalizeHeaders() if needed
+		5: {hashConnection, bytesConnection, nil, nil},             // restricted. added at finalizeHeaders()
+		6: {hashLastModified, bytesLastModified, (*serverResponse_)._insertLastModified, (*serverResponse_)._removeLastModified},
+		7: {hashExpires, bytesExpires, (*serverResponse_)._insertExpires, (*serverResponse_)._removeExpires},
+		8: {hashContentLength, bytesContentLength, nil, nil}, // restricted. added at finalizeHeaders()
+		9: {hashContentType, bytesContentType, (*serverResponse_)._insertContentType, (*serverResponse_)._removeContentType},
+	}
+	serverResponseCriticalHeaderFieldFind = func(nameHash uint16) int {
+		return (113100 / int(nameHash)) % len(serverResponseCriticalHeaderFieldTable)
+	}
+)
 
 var serverErrorPages = func() map[int16][]byte {
 	const template = `<!doctype html>
