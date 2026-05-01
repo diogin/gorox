@@ -7,14 +7,14 @@
 package main
 
 import (
-	"github.com/diogin/gorox/hemi/process"
+	"github.com/diogin/gorox/hemi/procman"
 
 	_ "github.com/diogin/gorox/hemi/goroxio/apps"
 	_ "github.com/diogin/gorox/hemi/goroxio/exts"
 )
 
 func main() {
-	process.Main(&process.Opts{
+	procman.Main(&procman.Opts{
 		ProgramName:  "goroxio",
 		ProgramTitle: "GoroxIO",
 		DebugLevel:   1,

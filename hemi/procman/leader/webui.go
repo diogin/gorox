@@ -9,9 +9,9 @@ package leader
 import (
 	"github.com/diogin/gorox/hemi"
 	"github.com/diogin/gorox/hemi/library/msgx"
-	"github.com/diogin/gorox/hemi/process/common"
+	"github.com/diogin/gorox/hemi/procman/common"
 
-	_ "github.com/diogin/gorox/hemi/process/leader/webui"
+	_ "github.com/diogin/gorox/hemi/procman/leader/webui"
 )
 
 var webChan = make(chan *msgx.Message) // used to send messages to workerKeeper

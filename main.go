@@ -7,7 +7,7 @@
 package main
 
 import (
-	"github.com/diogin/gorox/hemi/process"
+	"github.com/diogin/gorox/hemi/procman"
 
 	_ "github.com/diogin/gorox/apps" // all web applications
 	_ "github.com/diogin/gorox/exts" // all hemi extensions
@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	process.Main(&process.Opts{
+	procman.Main(&procman.Opts{
 		ProgramName:  "gorox",
 		ProgramTitle: "Gorox",
 		DebugLevel:   0,

@@ -1,7 +1,7 @@
-Process
+Procman
 =======
 
-Package process implements a leader-worker process model & its control client.
+Package procman implements a leader-worker process model & its control client.
 
 A control client process connects to a leader process, tells or calls its cmdui
 APIs. The leader process starts and monitors its worker process. It uses a TCP

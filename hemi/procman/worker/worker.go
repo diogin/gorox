@@ -15,7 +15,7 @@ import (
 
 	"github.com/diogin/gorox/hemi"
 	"github.com/diogin/gorox/hemi/library/msgx"
-	"github.com/diogin/gorox/hemi/process/common"
+	"github.com/diogin/gorox/hemi/procman/common"
 )
 
 var (

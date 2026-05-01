@@ -12,7 +12,7 @@ import (
 	"os"
 
 	"github.com/diogin/gorox/hemi/library/msgx"
-	"github.com/diogin/gorox/hemi/process/common"
+	"github.com/diogin/gorox/hemi/procman/common"
 )
 
 func Main(action string) {

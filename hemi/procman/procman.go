@@ -2,9 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-// Package process implements a leader-worker process model and its control client.
+// Package procman implements a leader-worker process model and its control client.
 
-package process
+package procman
 
 import (
 	"flag"
@@ -15,10 +15,10 @@ import (
 	"github.com/diogin/gorox/hemi"
 	"github.com/diogin/gorox/hemi/library/system"
 
-	"github.com/diogin/gorox/hemi/process/client"
-	"github.com/diogin/gorox/hemi/process/common"
-	"github.com/diogin/gorox/hemi/process/leader"
-	"github.com/diogin/gorox/hemi/process/worker"
+	"github.com/diogin/gorox/hemi/procman/client"
+	"github.com/diogin/gorox/hemi/procman/common"
+	"github.com/diogin/gorox/hemi/procman/leader"
+	"github.com/diogin/gorox/hemi/procman/worker"
 )
 
 const usage = `
