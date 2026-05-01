@@ -55,7 +55,7 @@ A program (like Gorox) using Hemi Engine typically has these dependencies:
                 |                               |          |
                 v                               v          v
   +------+   +---------------------------+   +------+ +---------+
-  | libs |<--+        apps & svcs        +-->| exts | |<process>|
+  | libs |<--+        apps & svcs        +-->| exts | |<procman>|
   +------+   +--+---------------------+--+   +--+---+ +----+----+
                 |                     |         |          |
                 v                     v         v          v
