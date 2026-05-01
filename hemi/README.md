@@ -37,8 +37,7 @@ the Hemi Engine, we also have these sub directories that supplement Hemi:
 The following sub directories are some programs that use the Hemi Engine:
 
   * goroxio/  - A program that implements the official website of Gorox,
-  * hemicar/  - A prototype program that is used to develop Hemi itself,
-  * rockman/  - A program that can optionally be used to manage gorox clusters.
+  * hemicar/  - A prototype program that is used to develop Hemi itself.
 
 
 Architecture
