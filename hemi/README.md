@@ -21,7 +21,7 @@ If you'd like to use the standard Hemi components, import them alongside with:
     import _ "github.com/diogin/gorox/hemi/plugins/builtin"
 
 For source code showing how to call the Hemi Engine in your programs, please see
-our examples in the "example/" sub directory.
+our examples: https://github.com/diogin/hemi-examples.
 
 
 Layout
@@ -39,10 +39,6 @@ The following sub directories are some programs that use the Hemi Engine:
   * goroxio/  - A program that implements the official website of Gorox,
   * hemicar/  - A prototype program that is used to develop Hemi itself,
   * rockman/  - A program that can optionally be used to manage gorox clusters.
-
-And something useful:
-
-  * example/  - Place example programs showing how to use the Hemi Engine.
 
 
 Architecture

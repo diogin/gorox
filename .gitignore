@@ -31,8 +31,6 @@ local.conf
 data/
 
 /gorox
-/hemi/example/embed/embed
-/hemi/example/myprg/myprg
 /hemi/goroxio/goroxio
 /hemi/hemicar/hemicar
 /hemi/rockman/rockman
