@@ -1602,7 +1602,7 @@ func (r *backend1Request) proxyCopyCookies(servReq ServerRequest) bool { // NOTE
 func (r *backend1Request) sendChain() error { return r.out1.sendChain() }
 
 func (r *backend1Request) echoHeaders() error { return r.out1.writeHeaders() }
-func (r *backend1Request) echoChain() error   { return r.out1.echoChain(true) } // we always use HTTP/1.1 chunked
+func (r *backend1Request) echoChain() error   { return r.out1.echoChain(true) } // we always use HTTP/1.1 chunked for backend side
 
 func (r *backend1Request) addTrailer(name []byte, value []byte) bool {
 	return r.out1.addTrailer(name, value)

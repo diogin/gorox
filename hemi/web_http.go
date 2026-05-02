@@ -1583,11 +1583,9 @@ type httpOut interface {
 	addedHeaders() []byte
 	fixedHeaders() []byte
 	finalizeHeaders()
-	beforeSend()
 	sendChain() error
-	beforeEcho()
 	echoHeaders() error
-	doEcho() error
+	echo() error
 	echoChain() error // chunks
 	addTrailer(name []byte, value []byte) bool
 	trailer(name []byte) (value []byte, ok bool)
@@ -1950,7 +1948,7 @@ func (r *_httpOut_) echoText(chunk []byte) error {
 	}
 	r.piece.SetText(chunk)
 	defer r.piece.zero()
-	return r.out.doEcho()
+	return r.out.echo()
 }
 func (r *_httpOut_) echoFile(chunk *os.File, info os.FileInfo, shut bool) error {
 	if err := r._beforeEcho(); err != nil {
@@ -1964,7 +1962,7 @@ func (r *_httpOut_) echoFile(chunk *os.File, info os.FileInfo, shut bool) error 
 	}
 	r.piece.SetFile(chunk, info, shut)
 	defer r.piece.zero()
-	return r.out.doEcho()
+	return r.out.echo()
 }
 func (r *_httpOut_) _beforeEcho() error {
 	if r.stream.isBroken() {
@@ -2688,10 +2686,7 @@ func (r *backendRequest_) SetIfUnmodifiedSince(since int64) bool {
 	return r._setUnixTime(&r.unixTimes.ifUnmodifiedSince, &r.indexes.ifUnmodifiedSince, since)
 }
 
-func (r *backendRequest_) beforeSend() {} // revising is not supported in backend side.
-
-func (r *backendRequest_) beforeEcho() {} // revising is not supported in backend side.
-func (r *backendRequest_) doEcho() error { // revising is not supported in backend side.
+func (r *backendRequest_) echo() error {
 	if r.stream.isBroken() {
 		return httpOutWriteBroken
 	}
@@ -5687,10 +5682,7 @@ func (r *serverResponse_) sendError(status int16, content []byte) error {
 	return r.out.sendChain()
 }
 
-func (r *serverResponse_) beforeSend() {}
-
-func (r *serverResponse_) beforeEcho() {}
-func (r *serverResponse_) doEcho() error {
+func (r *serverResponse_) echo() error {
 	if r.stream.isBroken() {
 		return httpOutWriteBroken
 	}

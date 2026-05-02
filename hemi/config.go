@@ -311,15 +311,15 @@ func (c *configurator) parseNode(backend Backend) { // node <compName> {}
 	c._parseLeaf(node)
 }
 func (c *configurator) parseQUIXRouter(stage *Stage) { // quixRouter <compName> {}
-	parseComponentR(c, stage, stage.createQUIXRouter, compTypeQUIXDealet, c.parseQUIXDealet, c.parseQUIXCase)
+	parseRouter(c, stage, stage.createQUIXRouter, compTypeQUIXDealet, c.parseQUIXDealet, c.parseQUIXCase)
 }
 func (c *configurator) parseTCPXRouter(stage *Stage) { // tcpxRouter <compName> {}
-	parseComponentR(c, stage, stage.createTCPXRouter, compTypeTCPXDealet, c.parseTCPXDealet, c.parseTCPXCase)
+	parseRouter(c, stage, stage.createTCPXRouter, compTypeTCPXDealet, c.parseTCPXDealet, c.parseTCPXCase)
 }
 func (c *configurator) parseUDPXRouter(stage *Stage) { // udpxRouter <compName> {}
-	parseComponentR(c, stage, stage.createUDPXRouter, compTypeUDPXDealet, c.parseUDPXDealet, c.parseUDPXCase)
+	parseRouter(c, stage, stage.createUDPXRouter, compTypeUDPXDealet, c.parseUDPXDealet, c.parseUDPXCase)
 }
-func parseComponentR[R Component, C any](c *configurator, stage *Stage, create func(compName string) R, infoDealet int16, parseDealet func(compSign *token, router R, kase *C), parseCase func(router R)) { // router
+func parseRouter[R Component, C any](c *configurator, stage *Stage, create func(compName string) R, infoDealet int16, parseDealet func(compSign *token, router R, kase *C), parseCase func(router R)) { // router
 	compName := c.forwardExpectToken(tokenString)
 	router := create(compName.text)
 	router.setParent(stage)
@@ -347,15 +347,15 @@ func parseComponentR[R Component, C any](c *configurator, stage *Stage, create f
 	}
 }
 func (c *configurator) parseQUIXDealet(compSign *token, router *QUIXRouter, kase *quixCase) { // qqqDealet <compName> {}, qqqDealet {}
-	parseComponentD(c, compSign, router, router.createDealet, kase, kase.addDealet)
+	parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
 }
 func (c *configurator) parseTCPXDealet(compSign *token, router *TCPXRouter, kase *tcpxCase) { // tttDealet <compName> {}, tttDealet {}
-	parseComponentD(c, compSign, router, router.createDealet, kase, kase.addDealet)
+	parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
 }
 func (c *configurator) parseUDPXDealet(compSign *token, router *UDPXRouter, kase *udpxCase) { // uuuDealet <compName> {}, uuuDealet {}
-	parseComponentD(c, compSign, router, router.createDealet, kase, kase.addDealet)
+	parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
 }
-func parseComponentD[R Component, T Component, C any](c *configurator, compSign *token, router R, create func(compSign string, compName string) T, kase *C, assign func(T)) { // dealet
+func parseDealet[R Component, T Component, C any](c *configurator, compSign *token, router R, create func(compSign string, compName string) T, kase *C, assign func(T)) { // dealet
 	compName := compSign.text
 	if current := c.forwardToken(); current.kind == tokenString {
 		compName = current.text
@@ -521,10 +521,18 @@ func (c *configurator) parseRpcsvc(compSign *token, stage *Stage) { // rpcsvc <c
 	c._parseLeaf(rpcsvc)
 }
 func (c *configurator) parseHstate(compSign *token, stage *Stage) { // xxxHstate <compName> {}
-	parseComponent0(c, compSign, stage, stage.createHstate)
+	compName := c.forwardExpectToken(tokenString)
+	hstate := stage.createHstate(compSign.text, compName.text)
+	hstate.setParent(stage)
+	c.forwardToken()
+	c._parseLeaf(hstate)
 }
 func (c *configurator) parseHcache(compSign *token, stage *Stage) { // xxxHcache <compName> {}
-	parseComponent0(c, compSign, stage, stage.createHcache)
+	compName := c.forwardExpectToken(tokenString)
+	hcache := stage.createHcache(compSign.text, compName.text)
+	hcache.setParent(stage)
+	c.forwardToken()
+	c._parseLeaf(hcache)
 }
 func (c *configurator) parseWebapp(compSign *token, stage *Stage) { // webapp <compName> {}
 	compName := c.forwardExpectToken(tokenString)
@@ -556,12 +564,12 @@ func (c *configurator) parseWebapp(compSign *token, stage *Stage) { // webapp <c
 	}
 }
 func (c *configurator) parseHandlet(compSign *token, webapp *Webapp, rule *Rule) { // xxxHandlet <compName> {}, xxxHandlet {}
-	parseComponentW(c, compSign, webapp, webapp.createHandlet, rule, rule.addHandlet)
+	parseHandler(c, compSign, webapp, webapp.createHandlet, rule, rule.addHandlet)
 }
 func (c *configurator) parseSocklet(compSign *token, webapp *Webapp, rule *Rule) { // xxxSocklet <compName> {}, xxxSocklet {}
-	parseComponentW(c, compSign, webapp, webapp.createSocklet, rule, rule.addSocklet)
+	parseHandler(c, compSign, webapp, webapp.createSocklet, rule, rule.addSocklet)
 }
-func parseComponentW[T Component](c *configurator, compSign *token, webapp *Webapp, create func(compSign string, compName string) T, rule *Rule, assign func(T)) { // handlet, socklet
+func parseHandler[T Component](c *configurator, compSign *token, webapp *Webapp, create func(compSign string, compName string) T, rule *Rule, assign func(T)) { // handlet, socklet
 	compName := compSign.text
 	if current := c.forwardToken(); current.kind == tokenString {
 		compName = current.text
@@ -655,10 +663,18 @@ func (c *configurator) _parseRuleCond(rule *Rule) {
 	rule.setInfo(cond)
 }
 func (c *configurator) parseServer(compSign *token, stage *Stage) { // xxxServer <compName> {}
-	parseComponent0(c, compSign, stage, stage.createServer)
+	compName := c.forwardExpectToken(tokenString)
+	server := stage.createServer(compSign.text, compName.text)
+	server.setParent(stage)
+	c.forwardToken()
+	c._parseLeaf(server)
 }
 func (c *configurator) parseCronjob(compSign *token, stage *Stage) { // xxxCronjob <compName> {}
-	parseComponent0(c, compSign, stage, stage.createCronjob)
+	compName := c.forwardExpectToken(tokenString)
+	cronjob := stage.createCronjob(compSign.text, compName.text)
+	cronjob.setParent(stage)
+	c.forwardToken()
+	c._parseLeaf(cronjob)
 }
 
 func (c *configurator) _parseLeaf(comp Component) {
@@ -843,14 +859,6 @@ func (c *configurator) _parseDict(comp Component, prop string, value *Value) {
 		}
 	}
 	value.kind, value.value = tokenDict, dict
-}
-
-func parseComponent0[T Component](c *configurator, compSign *token, stage *Stage, create func(compSign string, compName string) T) { // hstate, hcache, server, cronjob
-	compName := c.forwardExpectToken(tokenString)
-	component := create(compSign.text, compName.text)
-	component.setParent(stage)
-	c.forwardToken()
-	c._parseLeaf(component)
 }
 
 // condition is the condition for case and rule.
