@@ -138,11 +138,6 @@ article table.none tr td {
 		<li><a href="#stage-webapp-sitex">stage &gt; webapp &gt; [rule &gt;] sitex</a></li>
 		<li><a href="#stage-webapp-static">stage &gt; webapp &gt; [rule &gt;] static</a></li>
 		<li><a href="#stage-webapp-webdavHandlet">stage &gt; webapp &gt; [rule &gt;] webdavHandlet</a></li>
-		<li><a href="#stage-webapp-gzipReviser">stage &gt; webapp &gt; [rule &gt;] gzipReviser</a></li>
-		<li><a href="#stage-webapp-headReviser">stage &gt; webapp &gt; [rule &gt;] headReviser</a></li>
-		<li><a href="#stage-webapp-replaceReviser">stage &gt; webapp &gt; [rule &gt;] replaceReviser</a></li>
-		<li><a href="#stage-webapp-ssiReviser">stage &gt; webapp &gt; [rule &gt;] ssiReviser</a></li>
-		<li><a href="#stage-webapp-wrapReviser">stage &gt; webapp &gt; [rule &gt;] wrapReviser</a></li>
 		<li><a href="#stage-webapp-helloSocklet">stage &gt; webapp &gt; [rule &gt;] helloSocklet</a></li>
 		<li><a href="#stage-webapp-sockProxy">stage &gt; webapp &gt; [rule &gt;] sockProxy</a></li>
 		<li><a href="#stage-echoServer">stage &gt; echoServer</a></li>
@@ -630,12 +625,6 @@ Dicts:       [], ["a" : 1, "b" : ("two")]
 						取值范围：-
 					</code>
 
-					<p>.revisers 使用自定义的 revisers 进行处理。</p>
-					<code>语法：.revisers = ("reviser_bar", "reviser_foo")
-						默认值： -
-						取值范围：-
-					</code>
-
 					</code>
 					<p>rule 变量说明。</p>
 					<code>
@@ -740,9 +729,6 @@ webapp "main" {
 
 	rule $path ^= ("/robots.txt", "/static/") { // 静态资源添加缓存头
 		static {}
-		headReviser {
-			.addResponse = ["cache-control" : "max-age=86400"]
-		}
 	}
 
 	rule $path ~= "\.php$" { // 后缀是 php 都转到 fpm 上。
@@ -753,16 +739,10 @@ webapp "main" {
 
 	rule $queryString ~= "version=4.11" { // 根据 query 判断版本
 		.returnCode = 302
-		headReviser {
-			.addResponse = ["Location" : "/upgrade.html"]
-		}
 	}
 
 	rule $path !-e { // 文件路径变更
 		.returnCode = 302
-		headReviser {
-			.addResponse = ["Location" : "new_path" + $uri]
-		}
 	}
 
 	rule $path -d { // 允许浏览目录
@@ -1220,109 +1200,6 @@ httpProxy {
 			</ul>
 		<li id="stage-webapp-webdavHandlet">
 			<h4>stage &gt; webapp &gt; webdavHandlet </h4>
-		</li>
-		<li id="stage-webapp-gzipReviser">
-			<h4>stage &gt; webapp &gt; gzipReviser </h4>
-			<p>gzipReviser gzip压缩相关的配置</p>
-			<code>gzipReviser {
-					.compressLevel = 1
-					.minLength = 8k // 开启压缩的最小长度
-					.onContentTypes = ("text/html") // 压缩的类型
-				}
-			</code>
-			<ul>
-				<li>
-					<p>.compressLevel 压缩级别，其中1代表压缩速度最快，9代表压缩比最高。</p>
-					<code>语法： .compressLevel = 1
-						默认值： 1
-						取值范围：[1-9]
-					</code>
-				</li>
-				<li>
-					<p>.minLength 多小一下的数据不进行压缩。</p>
-					<code>语法： .minLength = 8K
-						默认值： -
-						取值范围：(0, maxInt64]
-					</code>
-				</li>
-				<li>
-					<p>.onContentTypes 开启压缩的类型。</p>
-					<code>语法： .onContentTypes = ("text/html", "text/css")
-						默认值： ("text/html")
-						取值范围：从 mimeTypes选择
-					</code>
-				</li>
-			</ul>
-		</li>
-		<li id="stage-webapp-headReviser">
-			<h4>stage &gt; webapp &gt; headReviser </h4>
-			<p>headReviser 对 header 做添加和删除。</p>
-			<ul>
-				<li>
-					<p>.addResponse 添加响应头信息。</p>
-					<code class="pre">语法：.addResponse = [
-	"cache-control" : "max-age=86400",
-	"date": "Mon, 14 Sep 2015 03:19:14 GMT",
-]
-默认值：-
-</code>
-				</li>
-
-				<li>
-					<p>.addRequest 添加请求头信息用于转发请求。</p>
-					<code class="pre">语法：.addRequest = [
-	"env" : "gray",
-	"x-root-id": "xxx-xxx-xxx-xxx",
-]
-默认值：-
-</code>
-				</li>
-
-				<li>
-					<p>.delRequest 删除请求头信息，一般用于转发请求。</p>
-					<code> 语法：.delRequest = ("cookie", "date")
-						默认值：-
-					</code>
-				</li>
-
-				<li>
-					<p>.delResponse 删除响应头信息</p>
-					<code> 语法：.delResponse = ("cookie", "date")
-						默认值：-
-					</code>
-				</li>
-
-				<li>
-					<p>例子</p>
-					<code class="pre">webapp "test" {
-	.hostnames = ("gorox.dev")
-	rule  {
-		static { }
-		headReviser {
-			.addResponse = ["cache-control" : "max-age=86400"]
-			.addRequest = ["env" : "gray"]
-			.delRequest = ("cookie", "date")
-			.delResponse = ("cookie", "date")
-		}
-		gzipReviser {
-			.onContentTypes = ("text/css", "application/javascript")
-		}
-	}
-}
-</code>
-				</li>
-			</ul>
-		</li>
-		<li id="stage-webapp-replaceReviser">
-			<h4>stage &gt; webapp &gt; replaceReviser </h4>
-		</li>
-
-		<li id="stage-webapp-ssiReviser">
-			<h4>stage &gt; webapp &gt; ssiReviser </h4>
-		</li>
-
-		<li id="stage-webapp-wrapReviser">
-			<h4>stage &gt; webapp &gt; wrapReviser </h4>
 		</li>
 
 		<li id="stage-webapp-sockProxy">

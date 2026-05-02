@@ -34,7 +34,6 @@ COMPONENTS
     hcache (filesysHcache, memoryHcache, ...)
     [webapp]
       handlet (hello, static, ...)
-      reviser (gzip, head, ...)
       socklet (hello, ...)
       [rule]
     server (httpxServer, hrpcServer, echoServer, ...)

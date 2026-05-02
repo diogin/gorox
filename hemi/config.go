@@ -546,8 +546,6 @@ func (c *configurator) parseWebapp(compSign *token, stage *Stage) { // webapp <c
 		switch current.info {
 		case compTypeHandlet:
 			c.parseHandlet(current, webapp, nil)
-		case compTypeReviser:
-			c.parseReviser(current, webapp, nil)
 		case compTypeSocklet:
 			c.parseSocklet(current, webapp, nil)
 		case compTypeRule:
@@ -560,13 +558,10 @@ func (c *configurator) parseWebapp(compSign *token, stage *Stage) { // webapp <c
 func (c *configurator) parseHandlet(compSign *token, webapp *Webapp, rule *Rule) { // xxxHandlet <compName> {}, xxxHandlet {}
 	parseComponentW(c, compSign, webapp, webapp.createHandlet, rule, rule.addHandlet)
 }
-func (c *configurator) parseReviser(compSign *token, webapp *Webapp, rule *Rule) { // xxxReviser <compName> {}, xxxReviser {}
-	parseComponentW(c, compSign, webapp, webapp.createReviser, rule, rule.addReviser)
-}
 func (c *configurator) parseSocklet(compSign *token, webapp *Webapp, rule *Rule) { // xxxSocklet <compName> {}, xxxSocklet {}
 	parseComponentW(c, compSign, webapp, webapp.createSocklet, rule, rule.addSocklet)
 }
-func parseComponentW[T Component](c *configurator, compSign *token, webapp *Webapp, create func(compSign string, compName string) T, rule *Rule, assign func(T)) { // handlet, reviser, socklet
+func parseComponentW[T Component](c *configurator, compSign *token, webapp *Webapp, create func(compSign string, compName string) T, rule *Rule, assign func(T)) { // handlet, socklet
 	compName := compSign.text
 	if current := c.forwardToken(); current.kind == tokenString {
 		compName = current.text
@@ -612,8 +607,6 @@ func (c *configurator) parseRule(webapp *Webapp) { // rule <compName> {}, rule <
 		switch current.info {
 		case compTypeHandlet:
 			c.parseHandlet(current, webapp, rule)
-		case compTypeReviser:
-			c.parseReviser(current, webapp, rule)
 		case compTypeSocklet:
 			c.parseSocklet(current, webapp, rule)
 		default:

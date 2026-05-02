@@ -231,7 +231,6 @@ type _httpIn0 struct { // for fast reset, entirely
 	arrayKind         int8    // kind of current r.array. see arrayKindXXX
 	receiving         int8    // what message section are we currently receiving? see httpSectionXXX
 	headerLines       zone    // header lines ->r.primes
-	hasRevisers       bool    // are there any incoming revisers hooked on this incoming message?
 	upgradeSocket     bool    // upgrade: websocket?
 	acceptGzip        bool    // does the peer accept gzip content coding? i.e. accept-encoding: gzip
 	acceptBrotli      bool    // does the peer accept brotli content coding? i.e. accept-encoding: br
@@ -242,7 +241,7 @@ type _httpIn0 struct { // for fast reset, entirely
 	iContentRange     uint8   // index of content-range header line in r.primes
 	iContentType      uint8   // index of content-type header line in r.primes
 	iDate             uint8   // index of date header line in r.primes
-	_                 [3]byte // padding, can be used by iXXX or zXXX
+	_                 [4]byte // padding, can be used by iXXX or zXXX
 	zAccept           zone    // zone of accept header lines in r.primes. may not be continuous
 	zAcceptEncoding   zone    // zone of accept-encoding header lines in r.primes. may not be continuous
 	zCacheControl     zone    // zone of cache-control header lines in r.primes. may not be continuous
@@ -1585,8 +1584,7 @@ type httpOut interface {
 	fixedHeaders() []byte
 	finalizeHeaders()
 	beforeSend()
-	doSend() error
-	sendChain() error // content
+	sendChain() error
 	beforeEcho()
 	echoHeaders() error
 	doEcho() error
@@ -1628,7 +1626,6 @@ type _httpOut_ struct { // for backendRequest_ and serverResponse_. outgoing mes
 type _httpOut0 struct { // for fast reset, entirely
 	controlEdge   uint16 // edge of control in r.output. only used by request to mark the method and request-target
 	outputEdge    uint16 // edge of r.output. max size of r.output must be <= 16K. used by both header fields and trailer fields because they are not manipulated at the same time
-	hasRevisers   bool   // are there any outgoing revisers hooked on this outgoing message?
 	isSent        bool   // whether the message is sent
 	forbidContent bool   // forbid content?
 	forbidFraming bool   // forbid content-length and transfer-encoding?
@@ -1858,9 +1855,9 @@ func (r *_httpOut_) Trailer(name string) (value string, ok bool) {
 
 func (r *_httpOut_) _proxyPassMessage(in httpIn) error {
 	proxyPass := r.out.proxyPassBytes
-	if in.IsVague() || r.hasRevisers { // if we need to revise, we always use vague no matter the original content is sized or vague
+	if in.IsVague() {
 		proxyPass = r.EchoBytes
-	} else { // in is sized and there are no revisers, use proxyPassBytes
+	} else { // in is sized, use proxyPassBytes
 		r.isSent = true
 		r.contentSize = in.ContentSize()
 		// TODO: find a way to reduce i/o syscalls if content is small?
@@ -1914,7 +1911,7 @@ func (r *_httpOut_) proxyPostMessage(content any, hasTrailers bool) error {
 			return err
 		}
 		r.forbidContent = true
-		return r.out.doSend()
+		return r.out.sendChain()
 	}
 }
 
@@ -1924,8 +1921,8 @@ func (r *_httpOut_) sendText(content []byte) error {
 	}
 	r.piece.SetText(content)
 	r.chain.PushTail(&r.piece)
-	r.contentSize = int64(len(content)) // initial size, may be changed by revisers
-	return r.out.doSend()
+	r.contentSize = int64(len(content)) // initial size
+	return r.out.sendChain()
 }
 func (r *_httpOut_) sendFile(content *os.File, info os.FileInfo, shut bool) error {
 	if err := r._beforeSend(); err != nil {
@@ -1933,17 +1930,14 @@ func (r *_httpOut_) sendFile(content *os.File, info os.FileInfo, shut bool) erro
 	}
 	r.piece.SetFile(content, info, shut)
 	r.chain.PushTail(&r.piece)
-	r.contentSize = info.Size() // initial size, may be changed by revisers
-	return r.out.doSend()
+	r.contentSize = info.Size() // initial size
+	return r.out.sendChain()
 }
 func (r *_httpOut_) _beforeSend() error {
 	if r.isSent {
 		return httpOutAlreadySent
 	}
 	r.isSent = true
-	if r.hasRevisers {
-		r.out.beforeSend()
-	}
 	return nil
 }
 
@@ -1984,9 +1978,6 @@ func (r *_httpOut_) _beforeEcho() error {
 	}
 	r.isSent = true
 	r.contentSize = -2 // vague
-	if r.hasRevisers {
-		r.out.beforeEcho()
-	}
 	return r.out.echoHeaders()
 }
 
@@ -2698,9 +2689,6 @@ func (r *backendRequest_) SetIfUnmodifiedSince(since int64) bool {
 }
 
 func (r *backendRequest_) beforeSend() {} // revising is not supported in backend side.
-func (r *backendRequest_) doSend() error { // revising is not supported in backend side.
-	return r.out.sendChain()
-}
 
 func (r *backendRequest_) beforeEcho() {} // revising is not supported in backend side.
 func (r *backendRequest_) doEcho() error { // revising is not supported in backend side.
@@ -2711,7 +2699,7 @@ func (r *backendRequest_) doEcho() error { // revising is not supported in backe
 	defer r.chain.free()
 	return r.out.echoChain()
 }
-func (r *backendRequest_) endVague() error { // revising is not supported in backend side.
+func (r *backendRequest_) endVague() error {
 	if r.stream.isBroken() {
 		return httpOutWriteBroken
 	}
@@ -3253,7 +3241,6 @@ type ServerRequest interface { // for *server[1-3]Request
 	proxyTakeContent() any
 	readContent() (data []byte, err error)
 	examineTail() bool
-	hookReviser(reviser Reviser)
 	riskyVariable(varCode int16, varName string) (varValue []byte)
 }
 
@@ -3339,13 +3326,12 @@ type _serverRequest0 struct { // for fast reset, entirely
 		maxStale     int32 // max-stale directive in cache-control
 		minFresh     int32 // min-fresh directive in cache-control
 	}
-	revisers     [32]uint8 // reviser ids which will apply on this request. indexed by reviser order
-	_            [2]byte   // padding
-	formReceived bool      // if content is a form, is it received?
-	formKind     int8      // deducted type of form. 0:not form. see formXXX
-	formEdge     int32     // edge position of the filled content in r.formWindow
-	pFieldName   span      // field name. used during receiving and parsing multipart form in case of sliding r.formWindow
-	consumedSize int64     // bytes of consumed content when consuming received tempFile. used by, for example, _recvMultipartForm.
+	_            [2]byte // padding
+	formReceived bool    // if content is a form, is it received?
+	formKind     int8    // deducted type of form. 0:not form. see formXXX
+	formEdge     int32   // edge position of the filled content in r.formWindow
+	pFieldName   span    // field name. used during receiving and parsing multipart form in case of sliding r.formWindow
+	consumedSize int64   // bytes of consumed content when consuming received tempFile. used by, for example, _recvMultipartForm.
 }
 
 func (r *serverRequest_) onUse(httpVersion uint8) { // for non-zeros
@@ -5352,11 +5338,6 @@ func (r *serverRequest_) applyTrailerLine(lineIndex uint8) bool {
 	return true
 }
 
-func (r *serverRequest_) hookReviser(reviser Reviser) { // to revise input content
-	r.hasRevisers = true
-	r.revisers[reviser.Rank()] = reviser.ID() // revisers are placed to fixed position, by their ranks.
-}
-
 func (r *serverRequest_) riskyVariable(varCode int16, varName string) (varValue []byte) {
 	if varCode != -1 {
 		return serverRequestVariables[varCode](r)
@@ -5542,7 +5523,6 @@ type ServerResponse interface { // for *server[1-3]Response
 	proxyPostMessage(backContent any, backHasTrailers bool) error // post held content to client
 	proxyCopyHeaderLines(backResp BackendResponse, proxyConfig *HTTPProxyConfig) bool
 	proxyCopyTrailerLines(backResp BackendResponse, proxyConfig *HTTPProxyConfig) bool
-	hookReviser(reviser Reviser)
 	riskyMake(size int) []byte
 }
 
@@ -5572,7 +5552,6 @@ type _serverResponse0 struct { // for fast reset, entirely
 		lastModified uint8
 		_            [6]byte // padding
 	}
-	revisers [32]uint8 // reviser ids which will apply on this response. indexed by reviser order
 }
 
 func (r *serverResponse_) onUse(httpVersion uint8) { // for non-zeros
@@ -5708,77 +5687,20 @@ func (r *serverResponse_) sendError(status int16, content []byte) error {
 	return r.out.sendChain()
 }
 
-func (r *serverResponse_) beforeSend() {
-	servResp := r.out.(ServerResponse)
-	for _, id := range r.revisers {
-		if id == 0 { // id of effective reviser is ensured to be > 0
-			continue
-		}
-		reviser := r.webapp.reviserByID(id)
-		reviser.BeforeSend(servResp.Request(), servResp) // revise header fields
-	}
-}
-func (r *serverResponse_) doSend() error {
-	if r.hasRevisers {
-		servResp := r.out.(ServerResponse)
-		for _, id := range r.revisers { // revise sized content
-			if id == 0 {
-				continue
-			}
-			reviser := r.webapp.reviserByID(id)
-			reviser.OnOutput(servResp.Request(), servResp, &r.chain)
-		}
-		// Because r.chain may be altered by revisers, content size must be recalculated
-		if contentSize, ok := r.chain.Size(); ok {
-			r.contentSize = contentSize
-		} else {
-			return httpOutTooLarge
-		}
-	}
-	return r.out.sendChain()
-}
+func (r *serverResponse_) beforeSend() {}
 
-func (r *serverResponse_) beforeEcho() {
-	servResp := r.out.(ServerResponse)
-	for _, id := range r.revisers { // revise header fields
-		if id == 0 { // id of effective reviser is ensured to be > 0
-			continue
-		}
-		reviser := r.webapp.reviserByID(id)
-		reviser.BeforeEcho(servResp.Request(), servResp)
-	}
-}
+func (r *serverResponse_) beforeEcho() {}
 func (r *serverResponse_) doEcho() error {
 	if r.stream.isBroken() {
 		return httpOutWriteBroken
 	}
 	r.chain.PushTail(&r.piece)
 	defer r.chain.free()
-	if r.hasRevisers {
-		servResp := r.out.(ServerResponse)
-		for _, id := range r.revisers { // revise vague content
-			if id == 0 { // id of effective reviser is ensured to be > 0
-				continue
-			}
-			reviser := r.webapp.reviserByID(id)
-			reviser.OnOutput(servResp.Request(), servResp, &r.chain)
-		}
-	}
 	return r.out.echoChain()
 }
 func (r *serverResponse_) endVague() error {
 	if r.stream.isBroken() {
 		return httpOutWriteBroken
-	}
-	if r.hasRevisers {
-		servResp := r.out.(ServerResponse)
-		for _, id := range r.revisers { // finish vague content
-			if id == 0 { // id of effective reviser is ensured to be > 0
-				continue
-			}
-			reviser := r.webapp.reviserByID(id)
-			reviser.FinishEcho(servResp.Request(), servResp)
-		}
 	}
 	return r.out.finalizeVague()
 }
@@ -5865,11 +5787,6 @@ func (r *serverResponse_) proxyCopyTrailerLines(backResp BackendResponse, proxyC
 	return backResp.proxyWalkTrailerLines(r.out, func(out httpOut, trailerLine *pair, trailerName []byte, lineValue []byte) bool {
 		return out.addTrailer(trailerName, lineValue)
 	})
-}
-
-func (r *serverResponse_) hookReviser(reviser Reviser) { // to revise output content
-	r.hasRevisers = true
-	r.revisers[reviser.Rank()] = reviser.ID() // revisers are placed to fixed position, by their ranks.
 }
 
 var ( // minimal perfect hash table for response critical header fields

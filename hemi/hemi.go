@@ -124,7 +124,6 @@ const ( // list of component types
 	compTypeWebapp
 	compTypeRule
 	compTypeHandlet
-	compTypeReviser
 	compTypeSocklet
 	compTypeQUIXRouter
 	compTypeTCPXRouter
@@ -172,7 +171,6 @@ var ( // component creators
 	hstateCreators     = make(map[string]func(compName string, stage *Stage) Hstate)
 	hcacheCreators     = make(map[string]func(compName string, stage *Stage) Hcache)
 	handletCreators    = make(map[string]func(compName string, stage *Stage, webapp *Webapp) Handlet)
-	reviserCreators    = make(map[string]func(compName string, stage *Stage, webapp *Webapp) Reviser)
 	sockletCreators    = make(map[string]func(compName string, stage *Stage, webapp *Webapp) Socklet)
 	quixDealetCreators = make(map[string]func(compName string, stage *Stage, router *QUIXRouter) QUIXDealet)
 	tcpxDealetCreators = make(map[string]func(compName string, stage *Stage, router *TCPXRouter) TCPXDealet)
@@ -210,9 +208,6 @@ func _registerComponent0[T Component](compSign string, compType int16, creators 
 func RegisterHandlet(compSign string, create func(compName string, stage *Stage, webapp *Webapp) Handlet) {
 	_registerComponent1(compSign, compTypeHandlet, handletCreators, create)
 }
-func RegisterReviser(compSign string, create func(compName string, stage *Stage, webapp *Webapp) Reviser) {
-	_registerComponent1(compSign, compTypeReviser, reviserCreators, create)
-}
 func RegisterSocklet(compSign string, create func(compName string, stage *Stage, webapp *Webapp) Socklet) {
 	_registerComponent1(compSign, compTypeSocklet, sockletCreators, create)
 }
@@ -225,7 +220,7 @@ func RegisterTCPXDealet(compSign string, create func(compName string, stage *Sta
 func RegisterUDPXDealet(compSign string, create func(compName string, stage *Stage, router *UDPXRouter) UDPXDealet) {
 	_registerComponent1(compSign, compTypeUDPXDealet, udpxDealetCreators, create)
 }
-func _registerComponent1[T Component, C Component](compSign string, compType int16, creators map[string]func(string, *Stage, C) T, create func(string, *Stage, C) T) { // handlet, reviser, socklet, dealet
+func _registerComponent1[T Component, C Component](compSign string, compType int16, creators map[string]func(string, *Stage, C) T, create func(string, *Stage, C) T) { // handlet, socklet, dealet
 	creatorsLock.Lock()
 	defer creatorsLock.Unlock()
 

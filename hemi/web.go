@@ -27,7 +27,6 @@ type Webapp struct {
 	hstate   Hstate            // the hstate which is used by this webapp
 	servers  []HTTPServer      // bound http servers. may be empty
 	handlets compDict[Handlet] // defined handlets. indexed by compName
-	revisers compDict[Reviser] // defined revisers. indexed by compName
 	socklets compDict[Socklet] // defined socklets. indexed by compName
 	rules    []*Rule           // defined rules. the order must be kept, so we use list. TODO: use ordered map?
 	// States
@@ -44,8 +43,6 @@ type Webapp struct {
 	exactHostnames   [][]byte          // like: ("example.com")
 	suffixHostnames  [][]byte          // like: ("*.example.com")
 	prefixHostnames  [][]byte          // like: ("www.example.*")
-	revisersByID     [256]Reviser      // for fast searching. position 0 is not used
-	numRevisers      uint8             // used number of revisersByID in this webapp
 	haveFSCheckRules bool              // ...
 }
 
@@ -53,9 +50,7 @@ func (a *Webapp) onCreate(compName string, stage *Stage) {
 	a.MakeComp(compName)
 	a.stage = stage
 	a.handlets = make(compDict[Handlet])
-	a.revisers = make(compDict[Reviser])
 	a.socklets = make(compDict[Socklet])
-	a.numRevisers = 1 // position 0 is not used
 }
 func (a *Webapp) OnShutdown() { close(a.ShutChan) } // notifies maintain() which shutdown sub components
 
@@ -163,7 +158,6 @@ func (a *Webapp) OnConfigure() {
 
 	// sub components
 	a.handlets.walk(Handlet.OnConfigure)
-	a.revisers.walk(Reviser.OnConfigure)
 	a.socklets.walk(Socklet.OnConfigure)
 	for _, rule := range a.rules {
 		rule.OnConfigure()
@@ -180,7 +174,6 @@ func (a *Webapp) OnPrepare() {
 
 	// sub components
 	a.handlets.walk(Handlet.OnPrepare)
-	a.revisers.walk(Reviser.OnPrepare)
 	a.socklets.walk(Socklet.OnPrepare)
 	for _, rule := range a.rules {
 		rule.OnPrepare()
@@ -212,14 +205,13 @@ func (a *Webapp) maintain() { // runner
 		// TODO
 	})
 
-	a.subs.Add(len(a.handlets) + len(a.revisers) + len(a.socklets) + len(a.rules))
+	a.subs.Add(len(a.handlets) + len(a.socklets) + len(a.rules))
 	for _, rule := range a.rules {
 		go rule.OnShutdown()
 	}
 	a.socklets.goWalk(Socklet.OnShutdown)
-	a.revisers.goWalk(Reviser.OnShutdown)
 	a.handlets.goWalk(Handlet.OnShutdown)
-	a.subs.Wait() // handlets, revisers, socklets, rules
+	a.subs.Wait() // handlets, socklets, rules
 
 	a.CloseLog()
 	if DebugLevel() >= 2 {
@@ -242,27 +234,6 @@ func (a *Webapp) createHandlet(compSign string, compName string) Handlet {
 	handlet.setShell(handlet)
 	a.handlets[compName] = handlet
 	return handlet
-}
-func (a *Webapp) createReviser(compSign string, compName string) Reviser {
-	if a.numRevisers == 255 {
-		UseExitln("cannot create reviser: too many revisers in one webapp")
-	}
-	if a.Reviser(compName) != nil {
-		UseExitln("conflicting reviser with a same component name in webapp")
-	}
-	creatorsLock.RLock()
-	create, ok := reviserCreators[compSign]
-	creatorsLock.RUnlock()
-	if !ok {
-		UseExitln("unknown reviser sign: " + compSign)
-	}
-	reviser := create(compName, a.stage, a)
-	reviser.setShell(reviser)
-	reviser.setID(a.numRevisers)
-	a.revisers[compName] = reviser
-	a.revisersByID[a.numRevisers] = reviser
-	a.numRevisers++
-	return reviser
 }
 func (a *Webapp) createSocklet(compSign string, compName string) Socklet {
 	if a.Socklet(compName) != nil {
@@ -291,14 +262,12 @@ func (a *Webapp) createRule(compName string) *Rule {
 }
 
 func (a *Webapp) DecHandlet() { a.subs.Done() }
-func (a *Webapp) DecReviser() { a.subs.Done() }
 func (a *Webapp) DecSocklet() { a.subs.Done() }
 func (a *Webapp) DecRule()    { a.subs.Done() }
 
 func (a *Webapp) bindServer(server HTTPServer) { a.servers = append(a.servers, server) }
 
 func (a *Webapp) Handlet(compName string) Handlet { return a.handlets[compName] }
-func (a *Webapp) Reviser(compName string) Reviser { return a.revisers[compName] }
 func (a *Webapp) Socklet(compName string) Socklet { return a.socklets[compName] }
 func (a *Webapp) Rule(compName string) *Rule {
 	for _, rule := range a.rules {
@@ -308,8 +277,6 @@ func (a *Webapp) Rule(compName string) *Rule {
 	}
 	return nil
 }
-
-func (a *Webapp) reviserByID(id uint8) Reviser { return a.revisersByID[id] }
 
 func (a *Webapp) AddSetting(name string, value string) {
 	a.settingsLock.Lock()
@@ -363,7 +330,6 @@ type Rule struct {
 	// Assocs
 	webapp   *Webapp   // associated webapp
 	handlets []Handlet // handlets in this rule. NOTICE: handlets are sub components of webapp, not rule
-	revisers []Reviser // revisers in this rule. NOTICE: revisers are sub components of webapp, not rule
 	socklets []Socklet // socklets in this rule. NOTICE: socklets are sub components of webapp, not rule
 	// States
 	generic    bool             // generic match?
@@ -450,24 +416,6 @@ func (r *Rule) OnConfigure() {
 		}
 	}
 
-	// .revisers
-	if v, ok := r.Find("revisers"); ok {
-		if len(r.revisers) != 0 {
-			UseExitln("specifying revisers is not allowed while there are literal revisers")
-		}
-		if compNames, ok := v.StringList(); ok {
-			for _, compName := range compNames {
-				if reviser := r.webapp.Reviser(compName); reviser != nil {
-					r.revisers = append(r.revisers, reviser)
-				} else {
-					UseExitf("reviser '%s' does not exist\n", compName)
-				}
-			}
-		} else {
-			UseExitln("invalid reviser names")
-		}
-	}
-
 	// .socklets
 	if v, ok := r.Find("socklets"); ok {
 		if len(r.handlets) > 0 {
@@ -493,7 +441,6 @@ func (r *Rule) OnPrepare() {
 }
 
 func (r *Rule) addHandlet(handlet Handlet) { r.handlets = append(r.handlets, handlet) }
-func (r *Rule) addReviser(reviser Reviser) { r.revisers = append(r.revisers, reviser) }
 func (r *Rule) addSocklet(socklet Socklet) { r.socklets = append(r.socklets, socklet) }
 
 func (r *Rule) isMatch(req ServerRequest) bool {
@@ -628,11 +575,6 @@ func (r *Rule) executeExchan(req ServerRequest, resp ServerResponse) (handled bo
 			// TODO: other general checks against origin server
 		}
 	}
-	// Hook revisers on request and response. When receiving or sending content, these revisers will be executed.
-	for _, reviser := range r.revisers { // hook revisers
-		req.hookReviser(reviser)
-		resp.hookReviser(reviser)
-	}
 	// Execute handlets
 	for _, handlet := range r.handlets {
 		if handled := handlet.Handle(req, resp); handled { // request is handled and a response is sent
@@ -719,51 +661,6 @@ type Mapper interface {
 	FindHandle(req ServerRequest) Handle // called firstly
 	HandleName(req ServerRequest) string // called secondly
 }
-
-// Reviser component revises incoming requests and outgoing responses.
-type Reviser interface {
-	// Imports
-	Component
-	// Methods
-	ID() uint8
-	setID(id uint8)
-	Rank() int8 // 0-31 (with 0-15 as tunable, 16-31 as fixed)
-
-	// For incoming requests, either sized or vague
-	BeforeRecv(req ServerRequest, resp ServerResponse)                 // for sized content
-	BeforeDraw(req ServerRequest, resp ServerResponse)                 // for vague content
-	OnInput(req ServerRequest, resp ServerResponse, input *Chain) bool // for both sized and vague
-	FinishDraw(req ServerRequest, resp ServerResponse)                 // for vague content
-
-	// For outgoing responses, either sized or vague
-	BeforeSend(req ServerRequest, resp ServerResponse)              // for sized content
-	BeforeEcho(req ServerRequest, resp ServerResponse)              // for vague content
-	OnOutput(req ServerRequest, resp ServerResponse, output *Chain) // for both sized and vague
-	FinishEcho(req ServerRequest, resp ServerResponse)              // for vague content
-}
-
-// Reviser_ is a parent.
-type Reviser_ struct { // for all revisers
-	// Parent
-	Component_
-	// Assocs
-	stage  *Stage  // current stage
-	webapp *Webapp // the webapp to which the reviser belongs
-	// States
-	id uint8 // the reviser id
-}
-
-func (r *Reviser_) OnCreate(compName string, stage *Stage, webapp *Webapp) {
-	r.MakeComp(compName)
-	r.stage = stage
-	r.webapp = webapp
-}
-
-func (r *Reviser_) Stage() *Stage   { return r.stage }
-func (r *Reviser_) Webapp() *Webapp { return r.webapp }
-
-func (r *Reviser_) ID() uint8      { return r.id }
-func (r *Reviser_) setID(id uint8) { r.id = id }
 
 // Socklet component handles the webSocket.
 type Socklet interface {

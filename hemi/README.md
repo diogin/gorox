@@ -113,8 +113,8 @@ process might looks like this:
    |     | [tcpx] | <gate><conn> |  <gate><conn>   | e |     |
    |     | [udpx] +--------------+-----------------+ r |     |
    |     | router |              | webapp(*)  rule | v |     |
-   |     |        |              | handlet reviser | e |     |
-   |     |  case  |  rpcsvc(*)   |     socklet     | r |     |
+   |     |        |              | handlet socklet | e |     |
+   |     |  case  |  rpcsvc(*)   |                 | r |     |
    |     | dealet |              +------+   +------+(*)|     |
    |     |        |              |hstate|   |hcache|   |     |
    |     +--------+--------------+------+---+------+---+     |
@@ -135,7 +135,6 @@ TODO
 * net system design and implementation.
 * rpc system design and implementation.
 * web rewrite handlet design and implementation.
-* web reviser design and implementation.
 * webSocket implementation.
 * http/2 implementation.
 * quic and http/3 implementation.
