@@ -147,7 +147,7 @@ func (w *worker) start(configBase string, configFile string, dieChan chan int) {
 	}
 
 	// Create worker process
-	process, err := os.StartProcess(system.ExePath, common.ProgramArgs, &os.ProcAttr{
+	workerProcess, err := os.StartProcess(system.ExePath, common.ProgramArgs, &os.ProcAttr{
 		Env:   []string{"_GOROX_DAEMON_=" + admGate.Addr().String() + "|" + w.connKey, "SYSTEMROOT=" + os.Getenv("SYSTEMROOT")},
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr}, // inherit standard file descriptors from leader
 		Sys:   system.DaemonSysAttr(),
@@ -155,7 +155,7 @@ func (w *worker) start(configBase string, configFile string, dieChan chan int) {
 	if err != nil {
 		common.Crash(err.Error())
 	}
-	w.process = process
+	w.process = workerProcess
 
 	// Accept admConn from worker
 	admConn, err := admGate.Accept()

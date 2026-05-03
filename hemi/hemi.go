@@ -113,6 +113,8 @@ func _exitf(exitCode int, prefix, f string, v ...any) {
 	os.Exit(exitCode)
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 const ( // list of component types
 	compTypeStage int16 = 1 + iota
 	compTypeFixture
@@ -247,6 +249,8 @@ func RegisterWebappInit(webappName string, init func(webapp *Webapp) error) {
 	webappInits[webappName] = init
 	initsLock.Unlock()
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 // Component is the interface for all components.
 type Component interface {
@@ -404,6 +408,8 @@ func (d compDict[T]) goWalk(method func(T)) {
 		go method(component)
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 // Stage component represents a running stage in the engine.
 //
@@ -993,6 +999,8 @@ func (s *Stage) Quit() {
 		Printf("stage id=%d: quit.\n", s.id)
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 // fixture component.
 //
@@ -1584,6 +1592,8 @@ func (f *resolvFixture) Resolve(name string) (address string) {
 	// TODO
 	return ""
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 // Cronjob component.
 //

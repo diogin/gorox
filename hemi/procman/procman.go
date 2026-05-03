@@ -210,12 +210,12 @@ func Main(opts *Opts) {
 			if err != nil {
 				common.Crash(err.Error())
 			}
-			if process, err := os.StartProcess(system.ExePath, common.ProgramArgs, &os.ProcAttr{
+			if leaderProcess, err := os.StartProcess(system.ExePath, common.ProgramArgs, &os.ProcAttr{
 				Env:   []string{"_GOROX_DAEMON_=leader", "SYSTEMROOT=" + os.Getenv("SYSTEMROOT")},
 				Files: []*os.File{devNull, stdout, stderr},
 				Sys:   system.DaemonSysAttr(),
 			}); err == nil { // leader process started
-				process.Release()
+				leaderProcess.Release()
 				devNull.Close()
 				stdout.Close()
 				stderr.Close()
