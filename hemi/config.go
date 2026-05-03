@@ -319,7 +319,7 @@ func (c *configurator) parseTCPXRouter(stage *Stage) { // tcpxRouter <compName> 
 func (c *configurator) parseUDPXRouter(stage *Stage) { // udpxRouter <compName> {}
 	parseRouter(c, stage, stage.createUDPXRouter, compTypeUDPXDealet, c.parseUDPXDealet, c.parseUDPXCase)
 }
-func parseRouter[R Component, C any](c *configurator, stage *Stage, create func(compName string) R, infoDealet int16, parseDealet func(compSign *token, router R, kase *C), parseCase func(router R)) { // router
+func parseRouter[R Component, C any](c *configurator, stage *Stage, create func(compName string) R, infoDealet int16, parseDealet func(compSign *token, router R, kase *C), parseCase func(router R)) {
 	compName := c.forwardExpectToken(tokenString)
 	router := create(compName.text)
 	router.setParent(stage)
@@ -355,7 +355,7 @@ func (c *configurator) parseTCPXDealet(compSign *token, router *TCPXRouter, kase
 func (c *configurator) parseUDPXDealet(compSign *token, router *UDPXRouter, kase *udpxCase) { // uuuDealet <compName> {}, uuuDealet {}
 	parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
 }
-func parseDealet[R Component, T Component, C any](c *configurator, compSign *token, router R, create func(compSign string, compName string) T, kase *C, assign func(T)) { // dealet
+func parseDealet[R Component, T Component, C any](c *configurator, compSign *token, router R, create func(compSign string, compName string) T, kase *C, assign func(T)) {
 	compName := compSign.text
 	if current := c.forwardToken(); current.kind == tokenString {
 		compName = current.text
@@ -1123,6 +1123,17 @@ func (l *lexer) _loadURL(base string, file string) string {
 	}
 }
 
+// token is a token in config file.
+type token struct { // 40 bytes
+	kind int16  // tokenXXX
+	info int16  // compXXX for components, or code for variables
+	line int32  // at line number
+	file string // file path
+	text string // text literal
+}
+
+func (t token) name() string { return tokenNames[t.kind] }
+
 const ( // list of tokens. if you change this list, change tokenNames too.
 	// Components
 	tokenComponent = 1 + iota // stage, rpcsvc, webapp, ...
@@ -1207,14 +1218,3 @@ var ( // solo tokens
 		'+': "+",
 	}
 )
-
-// token is a token in config file.
-type token struct { // 40 bytes
-	kind int16  // tokenXXX
-	info int16  // compXXX for components, or code for variables
-	line int32  // at line number
-	file string // file path
-	text string // text literal
-}
-
-func (t token) name() string { return tokenNames[t.kind] }
