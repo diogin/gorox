@@ -17,7 +17,7 @@ import (
 	"github.com/diogin/gorox/hemi/procman/common"
 )
 
-var cmdChan = make(chan *msgx.Message) // used to send messages to workerKeeper
+var cmdChan = make(chan *msgx.Message) // used to send messages to workerManager
 
 func cmduiServer() { // runner
 	if hemi.DebugLevel() >= 1 {
@@ -73,8 +73,8 @@ func cmduiServer() { // runner
 				}
 			case common.ComdReweb:
 				// TODO
-			default: // other messages are sent to workerKeeper().
-				keeperChan <- cmdChan
+			default: // other messages are sent to workerManager().
+				managerChan <- cmdChan
 				cmdChan <- req
 			}
 		} else { // call
@@ -83,8 +83,8 @@ func cmduiServer() { // runner
 			case common.ComdLeader:
 				resp = msgx.NewMessage(common.ComdLeader, req.Flag, nil)
 				resp.Set("goroutines", strconv.Itoa(runtime.NumGoroutine()))
-			default: // other messages are sent to workerKeeper().
-				keeperChan <- cmdChan
+			default: // other messages are sent to workerManager().
+				managerChan <- cmdChan
 				cmdChan <- req
 				resp = <-cmdChan
 			}

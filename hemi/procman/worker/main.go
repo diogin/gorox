@@ -21,7 +21,7 @@ import (
 var (
 	configBase string      // base string of config file
 	configFile string      // config file path
-	curStage   *hemi.Stage // current stage
+	curStage   *hemi.Stage // current stage in worker process
 )
 
 func Main(token string) {

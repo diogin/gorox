@@ -30,13 +30,13 @@ func Main() {
 	}
 
 	// Config check passed. Now start the worker
-	go workerKeeper(configBase, configFile)
-	<-keeperChan // wait for workerKeeper() to ensure worker is started.
+	go workerManager(configBase, configFile)
+	<-managerChan // wait for workerManager() to ensure worker is started.
 
 	if common.RockmanAddr == "" {
 		// TODO: sync?
-		go webuiServer()
 		go cmduiServer()
+		go webuiServer()
 	} else {
 		go rockmanClient()
 	}
@@ -44,9 +44,9 @@ func Main() {
 	select {} // sleep forever
 }
 
-var keeperChan = make(chan chan *msgx.Message)
+var managerChan = make(chan chan *msgx.Message) // used to send cmdChan, webChan, and roxChan
 
-func workerKeeper(configBase string, configFile string) { // runner
+func workerManager(configBase string, configFile string) { // runner
 	dieChan := make(chan int) // dead worker goes through this channel
 
 	rand.Seed(time.Now().UnixNano())
@@ -62,11 +62,11 @@ func workerKeeper(configBase string, configFile string) { // runner
 	if hemi.DebugLevel() >= 1 {
 		hemi.Printf("[leader] worker process id=%d started\n", worker.pid())
 	}
-	keeperChan <- nil // reply to Main() that we have created the worker.
+	managerChan <- nil // reply to Main() that we have created the worker.
 
 	for { // each event from cmduiServer()/webuiServer()/rockmanClient() and worker process
 		select {
-		case msgChan := <-keeperChan: // a message arrives
+		case msgChan := <-managerChan: // a message arrives
 			req := <-msgChan // get the message. msgChan might be cmdChan, webChan, and roxChan
 			if req.IsTell() {
 				switch req.Comd {

@@ -11,7 +11,7 @@ import (
 	"github.com/diogin/gorox/hemi/library/msgx"
 )
 
-var roxChan = make(chan *msgx.Message) // used to send messages to workerKeeper
+var roxChan = make(chan *msgx.Message) // used to send messages to workerManager
 
 func rockmanClient() { // runner
 	hemi.Println("[leader] rockmanClient: TODO")

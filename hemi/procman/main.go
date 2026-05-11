@@ -135,11 +135,13 @@ func Main(opts *Opts) {
 	case "advise":
 		system.Advise()
 	case "serve", "check":
+		// 1. debugMode
 		if _, ok := os.LookupEnv("_GOROX_DEVEL_"); ok {
 			hemi.SetDevelMode(true)
 		}
 		hemi.SetDebugLevel(int32(common.DebugLevel))
 
+		// 2. topDir
 		if common.TopDir == "" { // topDir is not specified
 			common.TopDir = system.ExeDir
 		} else { // topDir is specified
@@ -152,6 +154,7 @@ func Main(opts *Opts) {
 		common.TopDir = filepath.ToSlash(common.TopDir)
 		hemi.SetTopDir(common.TopDir)
 
+		// 3. logDir, tmpDir, varDir
 		setDir := func(pDir *string, name string, set func(string)) {
 			if dir := *pDir; dir == "" {
 				*pDir = common.TopDir + "/data/" + name
@@ -165,13 +168,13 @@ func Main(opts *Opts) {
 		setDir(&common.TmpDir, "tmp", hemi.SetTmpDir)
 		setDir(&common.VarDir, "var", hemi.SetVarDir)
 
-		if action == "check" { // dry run
+		if action == "check" { // check the config
 			if _, err := hemi.StageFromFile(common.GetConfig()); err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 			} else {
 				fmt.Println("PASS")
 			}
-		} else if token, ok := os.LookupEnv("_GOROX_DAEMON_"); ok { // run as a daemon
+		} else if token, ok := os.LookupEnv("_GOROX_DAEMON_"); ok { // run as a (leader or worker) daemon. started by starter
 			if token == "leader" { // as a leader daemon
 				system.DaemonInit()
 				leader.Main()
@@ -179,13 +182,17 @@ func Main(opts *Opts) {
 				worker.Main(token)
 			}
 		} else if common.SingleMode { // run as a single foreground worker process. for single mode
-			if stage, err := hemi.StageFromFile(common.GetConfig()); err == nil {
-				stage.Start(0)
+			if theStage, err := hemi.StageFromFile(common.GetConfig()); err == nil {
+				theStage.Start(0)
 				select {} // waiting forever
 			} else {
 				fmt.Fprintln(os.Stderr, err.Error())
 			}
-		} else if common.DaemonMode { // run as a starter which starts a leader daemon then exit
+		} else if common.DaemonMode { // run as a starter which starts a leader daemon and exits
+			devNull, err := os.Open(os.DevNull)
+			if err != nil {
+				common.Crash(err.Error())
+			}
 			newFile := func(file string, ext string, osFile *os.File) *os.File {
 				if file == "" {
 					file = common.LogDir + "/" + common.ProgramName + ext
@@ -206,15 +213,11 @@ func Main(opts *Opts) {
 			}
 			stdout := newFile(common.Stdout, ".out", os.Stdout)
 			stderr := newFile(common.Stderr, ".err", os.Stderr)
-			devNull, err := os.Open(os.DevNull)
-			if err != nil {
-				common.Crash(err.Error())
-			}
 			if leaderProcess, err := os.StartProcess(system.ExePath, common.ProgramArgs, &os.ProcAttr{
 				Env:   []string{"_GOROX_DAEMON_=leader", "SYSTEMROOT=" + os.Getenv("SYSTEMROOT")},
 				Files: []*os.File{devNull, stdout, stderr},
 				Sys:   system.DaemonSysAttr(),
-			}); err == nil { // leader process started
+			}); err == nil { // leader process was started
 				leaderProcess.Release()
 				devNull.Close()
 				stdout.Close()

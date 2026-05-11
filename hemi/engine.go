@@ -26,47 +26,38 @@ const Version = "0.3.0"
 var (
 	_develMode  atomic.Bool  // running in developer mode?
 	_debugLevel atomic.Int32 // the more of the level, the more verbose
-	_topDir     atomic.Value // directory of the executable
-	_topOnce    sync.Once    // protects _topDir
-	_logDir     atomic.Value // directory of the log files
-	_logOnce    sync.Once    // protects _logDir
-	_tmpDir     atomic.Value // directory of the temp files
-	_tmpOnce    sync.Once    // protects _tmpDir
-	_varDir     atomic.Value // directory of the run-time data
-	_varOnce    sync.Once    // protects _varDir
 )
 
 func DevelMode() bool   { return _develMode.Load() }
 func DebugLevel() int32 { return _debugLevel.Load() }
-func TopDir() string    { return _topDir.Load().(string) }
-func LogDir() string    { return _logDir.Load().(string) }
-func TmpDir() string    { return _tmpDir.Load().(string) }
-func VarDir() string    { return _varDir.Load().(string) }
 
 func SetDevelMode(devel bool)   { _develMode.Store(devel) }
 func SetDebugLevel(level int32) { _debugLevel.Store(level) }
-func SetTopDir(dir string) { // only once!
-	_topOnce.Do(func() {
-		_topDir.Store(dir)
-	})
-}
+
+var (
+	_topDir string // directory of the executable
+	_logDir string // directory of the log files
+	_tmpDir string // directory of the temp files
+	_varDir string // directory of the run-time data
+)
+
+func TopDir() string { return _topDir }
+func LogDir() string { return _logDir }
+func TmpDir() string { return _tmpDir }
+func VarDir() string { return _varDir }
+
+func SetTopDir(dir string) { _topDir = dir } // only once!
 func SetLogDir(dir string) { // only once!
-	_logOnce.Do(func() {
-		_logDir.Store(dir)
-		_mustMkdir(dir)
-	})
+	_logDir = dir
+	_mustMkdir(dir)
 }
 func SetTmpDir(dir string) { // only once!
-	_tmpOnce.Do(func() {
-		_tmpDir.Store(dir)
-		_mustMkdir(dir)
-	})
+	_tmpDir = dir
+	_mustMkdir(dir)
 }
 func SetVarDir(dir string) { // only once!
-	_varOnce.Do(func() {
-		_varDir.Store(dir)
-		_mustMkdir(dir)
-	})
+	_varDir = dir
+	_mustMkdir(dir)
 }
 func _mustMkdir(dir string) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -76,19 +67,12 @@ func _mustMkdir(dir string) {
 }
 
 func StageFromText(configText string) (*Stage, error) {
-	_checkDirs()
 	var c configurator
 	return c.stageFromText(configText)
 }
 func StageFromFile(configBase string, configFile string) (*Stage, error) {
-	_checkDirs()
 	var c configurator
 	return c.stageFromFile(configBase, configFile)
-}
-func _checkDirs() {
-	if _topDir.Load() == nil || _logDir.Load() == nil || _tmpDir.Load() == nil || _varDir.Load() == nil {
-		UseExitln("topDir, logDir, tmpDir, and varDir must all be set!")
-	}
 }
 
 const ( // exit codes
