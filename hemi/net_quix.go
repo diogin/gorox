@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/diogin/gorox/hemi/library/gotcp2"
+	"github.com/diogin/gorox/hemi/library/tcp2"
 )
 
 // quixHolder
@@ -73,9 +73,9 @@ type quixConn_[H quixHolder] struct { // for QUIXConn and QConn
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	id       int64        // the conn id
-	holder   H            // quixNode or quixGate
-	quicConn *gotcp2.Conn // the underlying conn
+	id       int64      // the conn id
+	holder   H          // quixNode or quixGate
+	quicConn *tcp2.Conn // the underlying conn
 	// Conn states (zeros)
 	counter           atomic.Int64 // can be used to generate a random number
 	lastRead          time.Time    // deadline of last read operation
@@ -85,7 +85,7 @@ type quixConn_[H quixHolder] struct { // for QUIXConn and QConn
 	concurrentStreams atomic.Int32 // how many concurrent streams?
 }
 
-func (c *quixConn_[H]) onGet(id int64, holder H, quicConn *gotcp2.Conn) {
+func (c *quixConn_[H]) onGet(id int64, holder H, quicConn *tcp2.Conn) {
 	c.id = id
 	c.holder = holder
 	c.quicConn = quicConn
@@ -129,11 +129,11 @@ type quixStream_ struct { // for QUIXStream and QStream
 	stockBuffer [256]byte // a (fake) buffer to workaround Go's conservative escape analysis
 	// Stream states (controlled)
 	// Stream states (non-zeros)
-	quicStream *gotcp2.Stream
+	quicStream *tcp2.Stream
 	// Stream states (zeros)
 }
 
-func (s *quixStream_) onUse(quicStream *gotcp2.Stream) {
+func (s *quixStream_) onUse(quicStream *tcp2.Stream) {
 	s.quicStream = quicStream
 }
 func (s *quixStream_) onEnd() {
@@ -272,9 +272,9 @@ type quixGate struct {
 	// Mixins
 	_quixHolder_
 	// States
-	maxConcurrentConns int32            // max concurrent conns allowed for this gate
-	concurrentConns    atomic.Int32     // TODO: false sharing
-	listener           *gotcp2.Listener // the real gate. set after open
+	maxConcurrentConns int32          // max concurrent conns allowed for this gate
+	concurrentConns    atomic.Int32   // TODO: false sharing
+	listener           *tcp2.Listener // the real gate. set after open
 }
 
 func (g *quixGate) onNew(router *QUIXRouter, id int32) {
@@ -318,7 +318,7 @@ func (g *quixGate) serveTLS() {
 	g.server.DecGate()
 }
 
-func (g *quixGate) justClose(quicConn *gotcp2.Conn) {
+func (g *quixGate) justClose(quicConn *tcp2.Conn) {
 	quicConn.Close()
 	g.DecConn()
 }
@@ -461,7 +461,7 @@ type QUIXConn struct {
 
 var poolQUIXConn sync.Pool
 
-func getQUIXConn(id int64, gate *quixGate, quicConn *gotcp2.Conn) *QUIXConn {
+func getQUIXConn(id int64, gate *quixGate, quicConn *tcp2.Conn) *QUIXConn {
 	var conn *QUIXConn
 	if x := poolQUIXConn.Get(); x == nil {
 		conn = new(QUIXConn)
@@ -476,7 +476,7 @@ func putQUIXConn(conn *QUIXConn) {
 	poolQUIXConn.Put(conn)
 }
 
-func (c *QUIXConn) onGet(id int64, gate *quixGate, quicConn *gotcp2.Conn) {
+func (c *QUIXConn) onGet(id int64, gate *quixGate, quicConn *tcp2.Conn) {
 	c.quixConn_.onGet(id, gate, quicConn)
 }
 func (c *QUIXConn) onPut() {
@@ -513,7 +513,7 @@ type QUIXStream struct {
 
 var poolQUIXStream sync.Pool
 
-func getQUIXStream(conn *QUIXConn, quicStream *gotcp2.Stream) *QUIXStream {
+func getQUIXStream(conn *QUIXConn, quicStream *tcp2.Stream) *QUIXStream {
 	var stream *QUIXStream
 	if x := poolQUIXStream.Get(); x == nil {
 		stream = new(QUIXStream)
@@ -528,7 +528,7 @@ func putQUIXStream(stream *QUIXStream) {
 	poolQUIXStream.Put(stream)
 }
 
-func (s *QUIXStream) onUse(conn *QUIXConn, quicStream *gotcp2.Stream) {
+func (s *QUIXStream) onUse(conn *QUIXConn, quicStream *tcp2.Stream) {
 	s.quixStream_.onUse(quicStream)
 	s.conn = conn
 }
@@ -647,7 +647,7 @@ type QConn struct {
 
 var poolQConn sync.Pool
 
-func getQConn(id int64, node *quixNode, quicConn *gotcp2.Conn) *QConn {
+func getQConn(id int64, node *quixNode, quicConn *tcp2.Conn) *QConn {
 	var conn *QConn
 	if x := poolQConn.Get(); x == nil {
 		conn = new(QConn)
@@ -662,7 +662,7 @@ func putQConn(conn *QConn) {
 	poolQConn.Put(conn)
 }
 
-func (c *QConn) onGet(id int64, node *quixNode, quicConn *gotcp2.Conn) {
+func (c *QConn) onGet(id int64, node *quixNode, quicConn *tcp2.Conn) {
 	c.quixConn_.onGet(id, node, quicConn)
 }
 func (c *QConn) onPut() {
@@ -696,7 +696,7 @@ type QStream struct {
 
 var poolQStream sync.Pool
 
-func getQStream(conn *QConn, quicStream *gotcp2.Stream) *QStream {
+func getQStream(conn *QConn, quicStream *tcp2.Stream) *QStream {
 	var stream *QStream
 	if x := poolQStream.Get(); x == nil {
 		stream = new(QStream)
@@ -711,7 +711,7 @@ func putQStream(stream *QStream) {
 	poolQStream.Put(stream)
 }
 
-func (s *QStream) onUse(conn *QConn, quicStream *gotcp2.Stream) {
+func (s *QStream) onUse(conn *QConn, quicStream *tcp2.Stream) {
 	s.quixStream_.onUse(quicStream)
 	s.conn = conn
 }

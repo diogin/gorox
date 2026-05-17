@@ -4,7 +4,7 @@
 
 // Common elements.
 
-package gotcp2
+package tcp2
 
 import (
 	"sync"

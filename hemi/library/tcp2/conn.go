@@ -4,7 +4,7 @@
 
 // QUIC connection.
 
-package gotcp2
+package tcp2
 
 import (
 	"net"

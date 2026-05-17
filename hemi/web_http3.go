@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/diogin/gorox/hemi/library/gotcp2"
+	"github.com/diogin/gorox/hemi/library/tcp2"
 )
 
 // http3Conn
@@ -33,7 +33,7 @@ type http3Conn_[H httpHolder, S http3Stream] struct { // for backend3Conn and se
 	// Conn states (stocks)
 	// Conn states (controlled)
 	// Conn states (non-zeros)
-	quicConn    *gotcp2.Conn // the underlying quic connection
+	quicConn    *tcp2.Conn   // the underlying quic connection
 	inBuffer    *http3Buffer // ...
 	decodeTable qpackTable   // ...
 	encodeTable qpackTable   // ...
@@ -46,7 +46,7 @@ type _http3Conn0 struct { // for fast reset, entirely
 	sectFore     uint32 // incoming frame section (header or payload) ends at c.inBuffer.buf[c.sectFore]
 }
 
-func (c *http3Conn_[H, S]) onGet(id int64, holder H, quicConn *gotcp2.Conn) {
+func (c *http3Conn_[H, S]) onGet(id int64, holder H, quicConn *tcp2.Conn) {
 	c.httpConn_.onGet(id, holder)
 
 	c.quicConn = quicConn
@@ -80,7 +80,7 @@ type http3Stream_[C http3Conn] struct { // for backend3Stream and server3Stream
 	// Stream states (stocks)
 	// Stream states (controlled)
 	// Stream states (non-zeros)
-	quicStream *gotcp2.Stream // the underlying quic stream
+	quicStream *tcp2.Stream // the underlying quic stream
 	// Stream states (zeros)
 	lastWrite     time.Time // deadline of last write operation
 	lastRead      time.Time // deadline of last read operation
@@ -89,7 +89,7 @@ type http3Stream_[C http3Conn] struct { // for backend3Stream and server3Stream
 type _http3Stream0 struct { // for fast reset, entirely
 }
 
-func (s *http3Stream_[C]) onUse(conn C, quicStream *gotcp2.Stream) {
+func (s *http3Stream_[C]) onUse(conn C, quicStream *tcp2.Stream) {
 	s.httpStream_.onUse(conn)
 
 	s.quicStream = quicStream
@@ -390,7 +390,7 @@ type backend3Conn struct {
 
 var poolBackend3Conn sync.Pool
 
-func getBackend3Conn(id int64, node *http3Node, quicConn *gotcp2.Conn) *backend3Conn {
+func getBackend3Conn(id int64, node *http3Node, quicConn *tcp2.Conn) *backend3Conn {
 	var backConn *backend3Conn
 	if x := poolBackend3Conn.Get(); x == nil {
 		backConn = new(backend3Conn)
@@ -405,7 +405,7 @@ func putBackend3Conn(backConn *backend3Conn) {
 	poolBackend3Conn.Put(backConn)
 }
 
-func (c *backend3Conn) onGet(id int64, node *http3Node, quicConn *gotcp2.Conn) {
+func (c *backend3Conn) onGet(id int64, node *http3Node, quicConn *tcp2.Conn) {
 	c.http3Conn_.onGet(id, node, quicConn)
 }
 func (c *backend3Conn) onPut() {
@@ -451,7 +451,7 @@ type backend3Stream struct {
 
 var poolBackend3Stream sync.Pool
 
-func getBackend3Stream(conn *backend3Conn, quicStream *gotcp2.Stream) *backend3Stream {
+func getBackend3Stream(conn *backend3Conn, quicStream *tcp2.Stream) *backend3Stream {
 	var backStream *backend3Stream
 	if x := poolBackend3Stream.Get(); x == nil {
 		backStream = new(backend3Stream)
@@ -472,7 +472,7 @@ func putBackend3Stream(backStream *backend3Stream) {
 	poolBackend3Stream.Put(backStream)
 }
 
-func (s *backend3Stream) onUse(conn *backend3Conn, quicStream *gotcp2.Stream) { // for non-zeros
+func (s *backend3Stream) onUse(conn *backend3Conn, quicStream *tcp2.Stream) { // for non-zeros
 	s.http3Stream_.onUse(conn, quicStream)
 
 	s.response.onUse()
@@ -679,7 +679,7 @@ type http3Gate struct {
 	// Parent
 	httpGate_[*http3Server]
 	// States
-	listener *gotcp2.Listener // the real gate. set after open
+	listener *tcp2.Listener // the real gate. set after open
 }
 
 func (g *http3Gate) onNew(server *http3Server, id int32) {
@@ -688,7 +688,7 @@ func (g *http3Gate) onNew(server *http3Server, id int32) {
 
 func (g *http3Gate) Open() error {
 	// TODO: udsMode or tlsMode?
-	listener := gotcp2.NewListener(g.Address())
+	listener := tcp2.NewListener(g.Address())
 	if err := listener.Open(); err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func (g *http3Gate) serveTLS() {
 	g.server.DecGate()
 }
 
-func (g *http3Gate) justClose(quicConn *gotcp2.Conn) {
+func (g *http3Gate) justClose(quicConn *tcp2.Conn) {
 	quicConn.Close()
 	g.DecConcurrentConns()
 	g.DecConn()
@@ -756,7 +756,7 @@ type server3Conn struct {
 
 var poolServer3Conn sync.Pool
 
-func getServer3Conn(id int64, gate *http3Gate, quicConn *gotcp2.Conn) *server3Conn {
+func getServer3Conn(id int64, gate *http3Gate, quicConn *tcp2.Conn) *server3Conn {
 	var servConn *server3Conn
 	if x := poolServer3Conn.Get(); x == nil {
 		servConn = new(server3Conn)
@@ -771,7 +771,7 @@ func putServer3Conn(servConn *server3Conn) {
 	poolServer3Conn.Put(servConn)
 }
 
-func (c *server3Conn) onGet(id int64, gate *http3Gate, quicConn *gotcp2.Conn) {
+func (c *server3Conn) onGet(id int64, gate *http3Gate, quicConn *tcp2.Conn) {
 	c.http3Conn_.onGet(id, gate, quicConn)
 }
 func (c *server3Conn) onPut() {
@@ -805,7 +805,7 @@ type server3Stream struct {
 
 var poolServer3Stream sync.Pool
 
-func getServer3Stream(conn *server3Conn, quicStream *gotcp2.Stream) *server3Stream {
+func getServer3Stream(conn *server3Conn, quicStream *tcp2.Stream) *server3Stream {
 	var servStream *server3Stream
 	if x := poolServer3Stream.Get(); x == nil {
 		servStream = new(server3Stream)
@@ -826,7 +826,7 @@ func putServer3Stream(servStream *server3Stream) {
 	poolServer3Stream.Put(servStream)
 }
 
-func (s *server3Stream) onUse(conn *server3Conn, quicStream *gotcp2.Stream) { // for non-zeros
+func (s *server3Stream) onUse(conn *server3Conn, quicStream *tcp2.Stream) { // for non-zeros
 	s.http3Stream_.onUse(conn, quicStream)
 
 	s.request.onUse()
