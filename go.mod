@@ -1,3 +1,3 @@
 module github.com/diogin/gorox
 
-go 1.22
+go 1.27

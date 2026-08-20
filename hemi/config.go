@@ -41,11 +41,19 @@ func (v *Value) Int64() (i64 int64, ok bool) {
 	i64, ok = v.value.(int64)
 	return
 }
-func (v *Value) Uint32() (u32 uint32, ok bool) { return toInt[uint32](v) }
-func (v *Value) Int32() (i32 int32, ok bool)   { return toInt[int32](v) }
-func (v *Value) Int16() (i16 int16, ok bool)   { return toInt[int16](v) }
-func (v *Value) Int8() (i8 int8, ok bool)      { return toInt[int8](v) }
-func (v *Value) Int() (i int, ok bool)         { return toInt[int](v) }
+func (v *Value) Uint32() (u32 uint32, ok bool) { return v.toInt[uint32]() }
+func (v *Value) Int32() (i32 int32, ok bool)   { return v.toInt[int32]() }
+func (v *Value) Int16() (i16 int16, ok bool)   { return v.toInt[int16]() }
+func (v *Value) Int8() (i8 int8, ok bool)      { return v.toInt[int8]() }
+func (v *Value) Int() (i int, ok bool)         { return v.toInt[int]() }
+func (v *Value) toInt[T ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64]() (i T, ok bool) {
+	i64, ok := v.Int64()
+	i = T(i64)
+	if ok && int64(i) != i64 {
+		ok = false
+	}
+	return
+}
 func (v *Value) String() (s string, ok bool) {
 	s, ok = v.value.(string)
 	return
@@ -131,15 +139,6 @@ func (v *Value) BytesVar(keeper varKeeper) []byte {
 }
 func (v *Value) StringVar(keeper varKeeper) string {
 	return string(keeper.riskyVariable(v.code, v.name))
-}
-
-func toInt[T ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64](v *Value) (i T, ok bool) {
-	i64, ok := v.Int64()
-	i = T(i64)
-	if ok && int64(i) != i64 {
-		ok = false
-	}
-	return
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -314,22 +313,64 @@ func (c *configurator) parseNode(backend Backend) { // node <compName> {}
 	c._parseLeaf(node)
 }
 func (c *configurator) parseQUIXRouter(stage *Stage) { // quixRouter <compName> {}
-	_parseRouter(c, stage, stage.createQUIXRouter, compTypeQUIXDealet, c.parseQUIXDealet, c.parseQUIXCase)
+	c._parseRouter(stage, stage.createQUIXRouter, compTypeQUIXDealet, c.parseQUIXDealet, c.parseQUIXCase)
 }
 func (c *configurator) parseTCPXRouter(stage *Stage) { // tcpxRouter <compName> {}
-	_parseRouter(c, stage, stage.createTCPXRouter, compTypeTCPXDealet, c.parseTCPXDealet, c.parseTCPXCase)
+	c._parseRouter(stage, stage.createTCPXRouter, compTypeTCPXDealet, c.parseTCPXDealet, c.parseTCPXCase)
 }
 func (c *configurator) parseUDPXRouter(stage *Stage) { // udpxRouter <compName> {}
-	_parseRouter(c, stage, stage.createUDPXRouter, compTypeUDPXDealet, c.parseUDPXDealet, c.parseUDPXCase)
+	c._parseRouter(stage, stage.createUDPXRouter, compTypeUDPXDealet, c.parseUDPXDealet, c.parseUDPXCase)
+}
+func (c *configurator) _parseRouter[R Component, C any](stage *Stage, create func(compName string) R, infoDealet int16, parseDealet func(compSign *token, router R, kase *C), parseCase func(router R)) {
+	compName := c.forwardExpectToken(tokenString)
+	router := create(compName.text)
+	router.setParent(stage)
+	c.forwardExpectToken(tokenLeftBrace) // {
+	for {
+		current := c.forwardToken()
+		if current.kind == tokenRightBrace { // }
+			return
+		}
+		if current.kind == tokenProperty { // .property
+			c._parseAssign(current, router)
+			continue
+		}
+		if current.kind != tokenComponent {
+			panic(fmt.Errorf("configurator error: unknown token %s=%s (in line %d) in router\n", current.name(), current.text, current.line))
+		}
+		switch current.info {
+		case infoDealet:
+			parseDealet(current, router, nil) // not in case
+		case compTypeCase:
+			parseCase(router)
+		default:
+			panic(fmt.Errorf("unknown component '%s' in router\n", current.text))
+		}
+	}
 }
 func (c *configurator) parseQUIXDealet(compSign *token, router *QUIXRouter, kase *quixCase) { // qqqDealet <compName> {}, qqqDealet {}
-	_parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
+	c._parseDealet(compSign, router, router.createDealet, kase, kase.addDealet)
 }
 func (c *configurator) parseTCPXDealet(compSign *token, router *TCPXRouter, kase *tcpxCase) { // tttDealet <compName> {}, tttDealet {}
-	_parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
+	c._parseDealet(compSign, router, router.createDealet, kase, kase.addDealet)
 }
 func (c *configurator) parseUDPXDealet(compSign *token, router *UDPXRouter, kase *udpxCase) { // uuuDealet <compName> {}, uuuDealet {}
-	_parseDealet(c, compSign, router, router.createDealet, kase, kase.addDealet)
+	c._parseDealet(compSign, router, router.createDealet, kase, kase.addDealet)
+}
+func (c *configurator) _parseDealet[R Component, T Component, C any](compSign *token, router R, create func(compSign string, compName string) T, kase *C, assign func(T)) {
+	compName := compSign.text
+	if current := c.forwardToken(); current.kind == tokenString {
+		compName = current.text
+		c.forwardToken()
+	} else if kase != nil { // in case
+		compName = c.makeCompName()
+	}
+	component := create(compSign.text, compName)
+	component.setParent(router)
+	if kase != nil { // in case
+		assign(component)
+	}
+	c._parseLeaf(component)
 }
 func (c *configurator) parseQUIXCase(router *QUIXRouter) { // case <compName> {}, case <compName> <cond> {}, case <cond> {}, case {}
 	kase := router.createCase(c.makeCompName()) // use a temp component name by default
@@ -490,10 +531,25 @@ func (c *configurator) parseWebapp(compSign *token, stage *Stage) { // webapp <c
 	}
 }
 func (c *configurator) parseHandlet(compSign *token, webapp *Webapp, rule *Rule) { // xxxHandlet <compName> {}, xxxHandlet {}
-	_parseHandler(c, compSign, webapp, webapp.createHandlet, rule, rule.addHandlet)
+	c._parseHandler(compSign, webapp, webapp.createHandlet, rule, rule.addHandlet)
 }
 func (c *configurator) parseSocklet(compSign *token, webapp *Webapp, rule *Rule) { // xxxSocklet <compName> {}, xxxSocklet {}
-	_parseHandler(c, compSign, webapp, webapp.createSocklet, rule, rule.addSocklet)
+	c._parseHandler(compSign, webapp, webapp.createSocklet, rule, rule.addSocklet)
+}
+func (c *configurator) _parseHandler[T Component](compSign *token, webapp *Webapp, create func(compSign string, compName string) T, rule *Rule, assign func(T)) { // handlet, socklet
+	compName := compSign.text
+	if current := c.forwardToken(); current.kind == tokenString {
+		compName = current.text
+		c.forwardToken()
+	} else if rule != nil { // in rule
+		compName = c.makeCompName()
+	}
+	component := create(compSign.text, compName)
+	component.setParent(webapp)
+	if rule != nil { // in rule
+		assign(component)
+	}
+	c._parseLeaf(component)
 }
 func (c *configurator) parseRule(webapp *Webapp) { // rule <compName> {}, rule <compName> <cond> {}, rule <cond> {}, rule {}
 	rule := webapp.createRule(c.makeCompName()) // use a temp component name by default
@@ -806,64 +862,6 @@ func (c *configurator) _parseDict(comp Component, prop string, value *Value) {
 		}
 	}
 	value.kind, value.value = tokenDict, dict
-}
-
-func _parseRouter[R Component, C any](c *configurator, stage *Stage, create func(compName string) R, infoDealet int16, parseDealet func(compSign *token, router R, kase *C), parseCase func(router R)) {
-	compName := c.forwardExpectToken(tokenString)
-	router := create(compName.text)
-	router.setParent(stage)
-	c.forwardExpectToken(tokenLeftBrace) // {
-	for {
-		current := c.forwardToken()
-		if current.kind == tokenRightBrace { // }
-			return
-		}
-		if current.kind == tokenProperty { // .property
-			c._parseAssign(current, router)
-			continue
-		}
-		if current.kind != tokenComponent {
-			panic(fmt.Errorf("configurator error: unknown token %s=%s (in line %d) in router\n", current.name(), current.text, current.line))
-		}
-		switch current.info {
-		case infoDealet:
-			parseDealet(current, router, nil) // not in case
-		case compTypeCase:
-			parseCase(router)
-		default:
-			panic(fmt.Errorf("unknown component '%s' in router\n", current.text))
-		}
-	}
-}
-func _parseDealet[R Component, T Component, C any](c *configurator, compSign *token, router R, create func(compSign string, compName string) T, kase *C, assign func(T)) {
-	compName := compSign.text
-	if current := c.forwardToken(); current.kind == tokenString {
-		compName = current.text
-		c.forwardToken()
-	} else if kase != nil { // in case
-		compName = c.makeCompName()
-	}
-	component := create(compSign.text, compName)
-	component.setParent(router)
-	if kase != nil { // in case
-		assign(component)
-	}
-	c._parseLeaf(component)
-}
-func _parseHandler[T Component](c *configurator, compSign *token, webapp *Webapp, create func(compSign string, compName string) T, rule *Rule, assign func(T)) { // handlet, socklet
-	compName := compSign.text
-	if current := c.forwardToken(); current.kind == tokenString {
-		compName = current.text
-		c.forwardToken()
-	} else if rule != nil { // in rule
-		compName = c.makeCompName()
-	}
-	component := create(compSign.text, compName)
-	component.setParent(webapp)
-	if rule != nil { // in rule
-		assign(component)
-	}
-	c._parseLeaf(component)
 }
 
 // condition is the condition for case and rule.

@@ -304,42 +304,42 @@ func (c *Component_) Prop(propName string) (propValue Value, ok bool) {
 }
 
 func (c *Component_) ConfigureBool(propName string, prop *bool, defaultValue bool) {
-	_configureProp(c, propName, prop, (*Value).Bool, nil, defaultValue)
+	c._configureProp(propName, prop, (*Value).Bool, nil, defaultValue)
 }
 func (c *Component_) ConfigureInt64(propName string, prop *int64, check func(value int64) error, defaultValue int64) {
-	_configureProp(c, propName, prop, (*Value).Int64, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Int64, check, defaultValue)
 }
 func (c *Component_) ConfigureInt32(propName string, prop *int32, check func(value int32) error, defaultValue int32) {
-	_configureProp(c, propName, prop, (*Value).Int32, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Int32, check, defaultValue)
 }
 func (c *Component_) ConfigureInt16(propName string, prop *int16, check func(value int16) error, defaultValue int16) {
-	_configureProp(c, propName, prop, (*Value).Int16, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Int16, check, defaultValue)
 }
 func (c *Component_) ConfigureInt8(propName string, prop *int8, check func(value int8) error, defaultValue int8) {
-	_configureProp(c, propName, prop, (*Value).Int8, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Int8, check, defaultValue)
 }
 func (c *Component_) ConfigureInt(propName string, prop *int, check func(value int) error, defaultValue int) {
-	_configureProp(c, propName, prop, (*Value).Int, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Int, check, defaultValue)
 }
 func (c *Component_) ConfigureString(propName string, prop *string, check func(value string) error, defaultValue string) {
-	_configureProp(c, propName, prop, (*Value).String, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).String, check, defaultValue)
 }
 func (c *Component_) ConfigureBytes(propName string, prop *[]byte, check func(value []byte) error, defaultValue []byte) {
-	_configureProp(c, propName, prop, (*Value).Bytes, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Bytes, check, defaultValue)
 }
 func (c *Component_) ConfigureDuration(propName string, prop *time.Duration, check func(value time.Duration) error, defaultValue time.Duration) {
-	_configureProp(c, propName, prop, (*Value).Duration, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).Duration, check, defaultValue)
 }
 func (c *Component_) ConfigureStringList(propName string, prop *[]string, check func(value []string) error, defaultValue []string) {
-	_configureProp(c, propName, prop, (*Value).StringList, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).StringList, check, defaultValue)
 }
 func (c *Component_) ConfigureBytesList(propName string, prop *[][]byte, check func(value [][]byte) error, defaultValue [][]byte) {
-	_configureProp(c, propName, prop, (*Value).BytesList, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).BytesList, check, defaultValue)
 }
 func (c *Component_) ConfigureStringDict(propName string, prop *map[string]string, check func(value map[string]string) error, defaultValue map[string]string) {
-	_configureProp(c, propName, prop, (*Value).StringDict, check, defaultValue)
+	c._configureProp(propName, prop, (*Value).StringDict, check, defaultValue)
 }
-func _configureProp[T any](c *Component_, propName string, prop *T, conv func(*Value) (T, bool), check func(value T) error, defaultValue T) {
+func (c *Component_) _configureProp[T any](propName string, prop *T, conv func(*Value) (T, bool), check func(value T) error, defaultValue T) {
 	if propValue, ok := c.Find(propName); ok {
 		if value, ok := conv(&propValue); ok && check == nil {
 			*prop = value
